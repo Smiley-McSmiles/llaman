@@ -1,4 +1,4 @@
-> LLaMan v0.1.0 - A Ollama and Open-WebUI manager written in BASH
+> LLaMan v0.1.1 - A Ollama and Open-WebUI manager written in BASH
 
 > Tested on Fedora 40
 
