@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/base_functions.sh
-llamanVersion=0.1.0
+llamanVersion=0.1.1
 configFile=/opt/open-webui/config/open-webui.conf
 
 Backup() {
@@ -201,12 +201,15 @@ Uninstall(){
 	echo "Uninstalling LLaMan, Ollama, and Open-Webui"
 	echo "You have 10 seconds to cancel with CTRL + C..."
 	Countdown 10
+	echo "TOO LATE!"
 	
 	llaman -d -S
-	groupdel $defaultUser
 	userdel $defaultUser
-	groupdel ollama
 	userdel ollama
+	sleep 3
+	groupdel $defaultUser
+	groupdel ollama
+	sleep 2
 	rm -rf $serviceLocation/open-webui.service $serviceLocation/ollama.service /usr/local/bin/ollama $ollamaModelsDirectory /usr/share/ollama /usr/bin/llaman 
 }
 

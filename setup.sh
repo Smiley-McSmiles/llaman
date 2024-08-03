@@ -82,8 +82,15 @@ Setup()
 
 	InstallDependencies
 
+	if id "$defaultUser" &>/dev/null; then
+		userdel $defaultUser
+		groupdel $defaultUser
+	fi
+
 	if [[ ! -d /opt/open-webui/config ]]; then
-		mkdir -p $defaultDir/config $defaultDir/log
+		mkdir $defaultDir
+		useradd -rd $defaultDir $defaultUser
+		mkdir $defaultDir/config $defaultDir/log
 	fi
 	
 	SetVar configFile $configFile "$configFile" str
@@ -132,13 +139,6 @@ Setup()
 
 	cp -f $DIRECTORY/configs/*.service $serviceLocation/
 	SetVar User $defaultUser $serviceLocation/open-webui.service str
-
-	if id "$defaultUser" &>/dev/null; then
-		groupdel $defaultUser
-		userdel $defaultUser
-	fi
-
-	useradd -rd $defaultDir $defaultUser
 
 	cd $defaultDir
 	git clone https://github.com/open-webui/open-webui.git
