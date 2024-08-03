@@ -1,7 +1,7 @@
 #!/bin/bash
 source /usr/bin/base_functions.sh
 llamanVersion=0.1.1
-configFile=/opt/open-webui/config/open-webui.conf
+configFile=/opt/open-webui/config/llaman.conf
 
 Backup() {
 	HasSudo
@@ -28,7 +28,7 @@ Backup() {
 	chmod -f 770 "$_tarPath"
 	
 	echo "> Your backup is:"
-	_tarSize=$(du -h "$tarPath")
+	_tarSize=$(du -h "$_tarPath")
 	echo "> Size: $_tarSize"
 }
 
@@ -38,8 +38,9 @@ Import() {
 	
 	PromptUser file "Enter a path to llaman-backup.tar" 0 0 "/path/to/llaman-backup.tar"
 	importTar=$promptResult
-
-	tar xf $importTar -C $defaultDir
+	
+	llaman -S
+	tar xf $importTar -C /
 	cp -rf $defaultDir/backup/data $defaultDir/open-webui/backend/ 
 	cp -rf $defaultDir/backup/config $defaultDir/
 	cp -rf $defaultDir/backup/log $defaultDir/
@@ -48,6 +49,7 @@ Import() {
 
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
+	llaman -s
 }
 
 InstallModel () {
@@ -210,7 +212,13 @@ Uninstall(){
 	groupdel $defaultUser
 	groupdel ollama
 	sleep 2
-	rm -rf $serviceLocation/open-webui.service $serviceLocation/ollama.service /usr/local/bin/ollama $ollamaModelsDirectory /usr/share/ollama /usr/bin/llaman 
+	rm -f $serviceLocation/open-webui.service
+	rm -f $serviceLocation/ollama.service
+	rm -r /usr/local/bin/ollama
+	rm -rf $defaultDir
+	rm -rf $ollamaModelsDirectory
+	rm -r /usr/share/ollama
+	rm -r /usr/bin/llaman 
 }
 
 Help () {
@@ -220,12 +228,13 @@ Help () {
 	echo
 	echo "PARAMETERS:"
 	echo "-b = Backup Open-WebUI users and settings"
+	echo "-i = Import Open-WebUI archive"
 	echo "-e = Enable Ollama and Open-WebUI"
 	echo "-d = Disable Ollama and Open-WebUI"
 	echo "-s = Start Ollama and Open-WebUI"
 	echo "-S = Stop Ollama and Open-WebUI"
 	echo "-r = Restart Ollama and Open-WebUI"
-	echo "-i = Install a downloaded .gguf model"
+	echo "-I = Install a downloaded .gguf model"
 	echo "-r = remove model from Ollama"
 	echo "-d = download .gguf file from https://huggingface.co"
 	echo "-u = update Ollama and Open-Webui"
@@ -242,6 +251,7 @@ if [ -n "$1" ]; then
    while [ -n "$1" ]; do
       case "$1" in
          -b) Backup ;;
+         -i) Import ;;
          -e) systemctl enable ollama
          	systemctl enable open-webui ;;
          -d) systemctl disable ollama
@@ -254,7 +264,7 @@ if [ -n "$1" ]; then
          	systemctl restart open-webui ;;
          -t) systemctl status ollama
          	systemctl status open-webui ;;
-         -i) InstallModel ;;
+         -I) InstallModel ;;
          -r) RemoveModel ;;
          -D) DownloadModel ;;
          -u) Update ;;

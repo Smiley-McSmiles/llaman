@@ -43,12 +43,13 @@ llaman [PARAMETER]
 
 PARAMETERS:
 -b = Backup Open-WebUI users and settings
+-i = Import Open-WebUI archive
 -e = Enable Ollama and Open-WebUI
 -d = Disable Ollama and Open-WebUI
 -s = Start Ollama and Open-WebUI
 -S = Stop Ollama and Open-WebUI
 -r = Restart Ollama and Open-WebUI
--i = Install a downloaded .gguf model
+-I = Install a downloaded .gguf model
 -r = remove model from Ollama
 -D = download .gguf file from https://huggingface.co
 -u = update Ollama and Open-Webui

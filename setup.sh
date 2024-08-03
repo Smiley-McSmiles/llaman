@@ -82,16 +82,24 @@ Setup()
 
 	InstallDependencies
 
+	# Debug Countdown
+	Countdown 5
+	
 	if id "$defaultUser" &>/dev/null; then
 		userdel $defaultUser
 		groupdel $defaultUser
 	fi
 
-	if [[ ! -d /opt/open-webui/config ]]; then
-		mkdir $defaultDir
-		useradd -rd $defaultDir $defaultUser
-		mkdir $defaultDir/config $defaultDir/log
+	if [[ -d $defaultDir ]]; then
+		rm -rf $defaultDir
 	fi
+	
+	mkdir $defaultDir
+	useradd -rd $defaultDir $defaultUser
+	mkdir $defaultDir/config $defaultDir/log
+	
+	# Debug Countdown
+	Countdown 10
 	
 	SetVar configFile $configFile "$configFile" str
 	SetVar defaultUser $defaultUser "$configFile" str
