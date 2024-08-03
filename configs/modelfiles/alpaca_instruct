@@ -1,0 +1,17 @@
+FROM /home/woosah/models/Moistral-11B-v4-Q8_0.gguf
+TEMPLATE """
+### System:
+{system}
+
+### Instruction:
+{instruction}
+
+### Input:
+{input}
+
+### Response:
+{response}
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"

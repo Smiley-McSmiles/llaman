@@ -1,0 +1,10 @@
+FROM /home/woosah/models/Fimbulvetr-11B-v2.Q8_0.gguf
+TEMPLATE """
+<start_of_turn>user
+{{ if .System }}{{ .System }} {{ end }}{{ .Prompt }}<end_of_turn>
+<start_of_turn>model
+{{ .Response }}<end_of_turn>
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"

@@ -1,0 +1,12 @@
+FROM /shared/llms/MN-12B-Celeste-V1.9.i1-Q4_0.gguf
+TEMPLATE """
+{{ if .System }}<|im_start|>system
+{{ .System }}<|im_end|>
+{{ end }}{{ if .Prompt }}<|im_start|>user
+{{ .Prompt }}<|im_end|>
+{{ end }}<|im_start|>assistant
+{{ .Response }}<|im_end|>
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"

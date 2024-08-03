@@ -1,0 +1,9 @@
+FROM /home/woosah/models/Fimbulvetr-11B-v2.Q8_0.gguf
+TEMPLATE """
+[INST] <<SYS>>{{ .System }}<</SYS>>
+
+{{ .Prompt }} [/INST]
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"

@@ -1,0 +1,270 @@
+#!/bin/bash
+source /usr/bin/base_functions.sh
+llamanVersion=0.1.0
+configFile=/opt/open-webui/config/open-webui.conf
+
+Backup() {
+	HasSudo
+	source $configFile
+	_date=$(date +%m-%d-%Y-%H:%M)
+	_fileName="llaman-backup-$_date.tar"
+	
+	PromptUser dir "Enter a directory to output the .tar archive" 0 0 "/path/to/directory"
+	_backupDirectory=$promptResult
+	_tarPath=$_backupDirectory/$_fileName
+	
+	if [[ ! -d /opt/open-webui/backup ]]; then
+		mkdir /opt/open-webui/backup
+	fi
+	cp -rf $defaultDir/open-webui/backend/data $defaultDir/backup/
+	cp -rf $defaultDir/config $defaultDir/backup/
+	cp -rf $defaultDir/log $defaultDir/backup/
+	time tar cf "$_tarPath" /opt/open-webui/backup
+	
+	rm -rf $defaultDir/backup
+	
+	USER1=$(stat -c '%U' "$_backupDirectory")
+	chown -f $USER1:$USER1 "$_tarPath"
+	chmod -f 770 "$_tarPath"
+	
+	echo "> Your backup is:"
+	_tarSize=$(du -h "$tarPath")
+	echo "> Size: $_tarSize"
+}
+
+Import() {
+	HasSudo
+	source $configFile
+	
+	PromptUser file "Enter a path to llaman-backup.tar" 0 0 "/path/to/llaman-backup.tar"
+	importTar=$promptResult
+
+	tar xf $importTar -C $defaultDir
+	cp -rf $defaultDir/backup/data $defaultDir/open-webui/backend/ 
+	cp -rf $defaultDir/backup/config $defaultDir/
+	cp -rf $defaultDir/backup/log $defaultDir/
+	
+	rm -rf /$defaultDir/backup
+
+	chown -Rf $defaultUser:$defaultUser $defaultDir
+	chmod -Rf 770 $defaultDir
+}
+
+InstallModel () {
+	HasSudo
+	source $configFile
+	selectedModelFile=""
+	echo "Listing files in the current directory"
+	ggufNum=0
+	modelFileNum=0
+	
+	for fileName in $ggufDirectory/*.gguf; do
+		let ggufNum++
+		fileName=$(echo "$fileName" | rev | cut -d / -f 1 | rev)
+		echo "$ggufNum. $fileName"
+	done
+	
+	PromptUser num "Please enter the number corresponding to the file you want to select" 1 $ggufNum "1-$ggufNum"
+	fileNumber=$promptResult
+
+	for fileName in $defaultDir/config/modelfiles/*; do
+		let modelFileNum++
+		fileName=$(echo "$fileName" | rev | cut -d / -f 1 | rev)
+		echo "$modelFileNum. $fileName"
+	done
+
+	PromptUser num "Please enter the number corresponding to the model file you want to select" 1 $ggufNum "1-$ggufNum"
+	modelFile=$promptResult
+	
+	selectedFile=$(ls $ggufDirectory/*.gguf | head -n $fileNumber | tail -n 1)
+	selectedModelFile=$(ls $defaultDir/config/modelfiles/* | head -n $modelFile | tail -n 1)
+	nameOfLLM=$(echo "$selectedFile" | rev | cut -d / -f 1 | rev | sed -e "s|.gguf||g")
+	echo "Selected file: $selectedFile"
+	echo "Name of LLM: $nameOfLLM"
+	sed -i "s|FROM /.*|FROM $selectedFile|g" $selectedModelFile
+	ollama create $nameOfLLM -f $selectedModelFile
+}
+
+RemoveModel () {
+	HasSudo
+	echo "Installed LLMs:"
+	installedLLMs=$(ollama list | grep -o ".*:latest" | cat -n)
+	num=$(echo "$installedLLMs" | wc -l)
+	
+	echo "$installedLLMs"
+
+	read -p "Please enter the number corresponding to the LLM you want to remove: " LLMNumber
+
+	if [ $LLMNumber -gt $num ] || [ $LLMNumber -lt 1 ] ; then
+		  echo "Invalid selection. Please choose a number within the range of available LLMs."
+	else
+		  selectedFile=$(ollama list | grep -o ".*:latest" | head -n $LLMNumber | tail -n 1)
+		  echo "Selected LLM: $selectedFile"
+		  ollama rm $selectedFile
+	fi
+}
+
+DownloadModel () {
+	HasSudo
+	source $configFile
+	echo "> Please past the URL to the .gguf file from https://huggingface.co"
+	read -p ">>> URL : " 'URL'
+	
+	if [[ -n "$URL" ]]; then
+		URL=$(echo $URL | sed 's/?download=true//')
+		fileName=$(echo $URL | rev | cut -d / -f 1 | rev)
+		echo "screen -dmS llm-downloading bash -c 'wget -O ${ggufDirectory}/${fileName} ${URL}'"
+		screen -dmS llm-downloading bash -c "wget -O $ggufDirectory/$fileName $URL"
+		exit
+	else
+	    echo "> Please provide a link to a .gguf file"
+	fi
+}
+
+UpdateWeb() {
+	cd $defaultDir
+	
+	if [[ -d open-webui-backup ]]; then
+		rm -rf open-webui-backup
+	fi
+	
+	mv open-webui open-webui-backup
+	git clone https://github.com/open-webui/open-webui.git
+	cd open-webui/
+
+	cp -RPp .env.example .env
+
+	npm i
+	npm run build
+
+	cd backend/
+	pip install -r requirements.txt -U
+	
+	# Move data from previous install
+	cp -rfv ../../open-webui-backup/backend/data ./
+
+	sed -ri "s|exec uvicorn|python -m uvicorn|g" start.sh
+	chown -Rf $defaultUser:$defaultUser $defaultDir
+	chmod -Rf 770 $defaultDir
+}
+
+Update() {
+	HasSudo
+	source $configFile
+	installedOllamaVersion=$(GetOllamaVersion)
+	latestOllamaVersion=$(GetLatestOllamaVersion)
+	installedWebUIVersion=$(GetWebUIVersion)
+	latestWebUIVersion=$(GetLatestWebUIVersion)
+	
+	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
+		curl -fsSL https://ollama.com/install.sh | sh
+	else
+		echo "> The latest Ollama version $latestOllamaVersion is already installed."
+	fi
+
+	if [[ ! "$installedWebUIVersion" == "$latestWebUIVersion" ]]; then
+		UpdateWeb
+	else
+		echo "> The latest Open Web-UI version $latestWebUIVersion is already installed."
+	fi
+}
+
+GetVersions() {
+	HasSudo
+	installedOllamaVersion=$(GetOllamaVersion)
+	installedWebUIVersion=$(GetWebUIVersion)
+	echo "LLaMan v$llamanVersion"
+	echo "Ollama v$installedOllamaVersion"
+	echo "Open-WebUI v$installedWebUIVersion"
+}
+
+GetLatestOllamaVersion() {
+	echo $(curl -fsSL https://github.com/ollama/ollama/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9]\.[0-9]")
+}
+
+GetOllamaVersion() {
+	echo $(ollama --version | rev | cut -d " " -f 1 | rev)
+}
+
+GetLatestWebUIVersion(){
+	echo $(curl -fsSL https://github.com/open-webui/open-webui/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9]\.[0-9][0-9]")
+}
+
+GetWebUIVersion() {
+	source $configFile
+	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "[0-9].[0-9]\.[0-9][0-9]")
+}
+
+Uninstall(){
+	HasSudo
+	source $configFile
+	echo "Uninstalling LLaMan, Ollama, and Open-Webui"
+	echo "You have 10 seconds to cancel with CTRL + C..."
+	Countdown 10
+	
+	llaman -d -S
+	groupdel $defaultUser
+	userdel $defaultUser
+	groupdel ollama
+	userdel ollama
+	rm -rf $serviceLocation/open-webui.service $serviceLocation/ollama.service /usr/local/bin/ollama $ollamaModelsDirectory /usr/share/ollama /usr/bin/llaman 
+}
+
+Help () {
+	echo "LLaMan $llamanVersion"
+	echo ""
+	echo "llaman [PARAMETER]"
+	echo
+	echo "PARAMETERS:"
+	echo "-b = Backup Open-WebUI users and settings"
+	echo "-e = Enable Ollama and Open-WebUI"
+	echo "-d = Disable Ollama and Open-WebUI"
+	echo "-s = Start Ollama and Open-WebUI"
+	echo "-S = Stop Ollama and Open-WebUI"
+	echo "-r = Restart Ollama and Open-WebUI"
+	echo "-i = Install a downloaded .gguf model"
+	echo "-r = remove model from Ollama"
+	echo "-d = download .gguf file from https://huggingface.co"
+	echo "-u = update Ollama and Open-Webui"
+	echo "-v = get LLaMan, Ollama, and Open-Webui version"
+	echo "-h = display this help menu"
+	echo "-X = Uninstall LLaMan, Ollama, and Open-Webui"
+	echo "Example: sudo llaman -d"
+}
+
+###############################################################################
+# MAIN                                                                        #
+###############################################################################
+if [ -n "$1" ]; then
+   while [ -n "$1" ]; do
+      case "$1" in
+         -b) Backup ;;
+         -e) systemctl enable ollama
+         	systemctl enable open-webui ;;
+         -d) systemctl disable ollama
+         	systemctl disable open-webui ;;
+         -S) systemctl stop ollama
+         	systemctl stop open-webui ;;
+         -s) systemctl start ollama
+         	systemctl start open-webui ;;
+         -r) systemctl restart ollama
+         	systemctl restart open-webui ;;
+         -t) systemctl status ollama
+         	systemctl status open-webui ;;
+         -i) InstallModel ;;
+         -r) RemoveModel ;;
+         -D) DownloadModel ;;
+         -u) Update ;;
+         -v) GetVersions ;;
+         -X) Uninstall ;;
+         -h) Help ;;
+         *) echo "Option $1 not recognized"
+            Help ;;
+      esac
+      shift
+   done
+else
+   echo "> No parameters given."
+   Help
+   exit
+fi

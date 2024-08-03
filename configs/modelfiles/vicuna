@@ -1,0 +1,9 @@
+FROM /home/woosah/models/vicuna-13b-v1.5-16k.Q8_0.gguf
+TEMPLATE """
+{{ if .System }}{{ .System }}
+{{ end }}{{ if .Prompt }}USER: {{ .Prompt }}
+{{ end }}ASSISTANT: {{ .Response }}
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"

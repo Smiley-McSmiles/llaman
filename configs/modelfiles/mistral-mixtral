@@ -1,0 +1,7 @@
+FROM /home/woosah/models/WizardLM-2-7B-abliterated-Q8_0.gguf
+TEMPLATE """
+[INST] {{ if .System }}{{ .System }} {{ end }}{{ .Prompt }} [/INST]
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"

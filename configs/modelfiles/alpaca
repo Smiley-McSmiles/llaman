@@ -1,0 +1,13 @@
+FROM /home/woosah/models/Moistral-11B-v4-Q8_0.gguf
+TEMPLATE """
+{{ if .System }}{{ .System }}
+
+{{ end }}{{ if .Prompt }}### Instruction:
+{{ .Prompt }}
+
+{{ end }}### Response:
+{{ .Response }}
+"""
+PARAMETER stop "</s>"
+PARAMETER stop "USER:"
+PARAMETER stop "ASSISTANT:"
