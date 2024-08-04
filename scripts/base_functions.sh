@@ -343,7 +343,9 @@ PresentList()
 ViewLog()
 {
 	logDir=$1
-	PresentList "$logDir" "> Please enter the number corresponding with the log you wish to view."
+	PresentList "$logDir" "> Please enter the number corresponding with the log you wish to view." ".log"
 	logToView=$presentListResult
 	less +G -FS $logDir/$logToView
+
+# ViewLog "/dir/to/logs"
 }

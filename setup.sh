@@ -1,6 +1,7 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
+llamanVersion=0.1.2
 httpPort=8080
 defaultUser=open-webui
 defaultDir=/opt/open-webui
@@ -17,7 +18,23 @@ Update(){
 	cp -f $DIRECTORY/scripts/base_functions.sh /usr/bin/
 	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
 	cp -f $DIRECTORY/configs/modelfiles/* $defaultDir/config/modelfiles/
-	echo "> Done!"
+	cp -f $DIRECTORY/configs/llaman-backup.service $serviceDirectory/
+	
+	if [[ ! -f $serviceDirectory/llaman-backup.timer ]]; then
+		cp -f $DIRECTORY/configs/llaman-backup.timer $serviceDirectory/
+		SetVar backupDirectory "$backupDirectory" "$configFile" str
+		SetVar maxBackupNumber 5 "$configFile" str
+		SetVar autoBackups true "$configFile" str
+		SetVar backupFrequency "weekly" "$configFile" str
+		systemctl enable --now llaman-backup.timer
+		Log "SETUP-UPDATE | SetVar backupDirectory=$backupDirectory" $logFile
+		Log "SETUP-UPDATE | SetVar maxBackupNumber=$maxBackupNumer" $logFile
+		Log "SETUP-UPDATE | SetVar autoBackups=$true" $logFile
+		Log "SETUP-UPDATE | SetVar backupFrequency=weekly" $logFile
+	fi
+	
+	systemctl daemon-reload
+	echo "> Updated LLaMan to v$llamanVersion!"
 }
 
 InstallDependencies()
@@ -26,7 +43,7 @@ InstallDependencies()
 	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) screen"
 	packagesNeededArch="npm python-devtools make automake gcc linux-headers curl screen"
 	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel curl screen"
-	echo "> Preparing to install needed dependancies for Jellyfin..."
+	echo "> Preparing to install needed dependancies for LLaman and Open-WebUI..."
 
 	if [[ -f /etc/os-release ]]; then
 		source /etc/os-release
@@ -89,6 +106,9 @@ Setup(){
 	PromptUser dir "Please enter a directory for Open-WebUI backups." 0 0 "/path/to/directory"
 	backupDirectory=$promptResult
 
+	PromptUser num "> Please enter your desired maximum number of backup archives" 1 20 "1-20"
+	maxBackupNumber=$promptResult
+
 	echo "Would you like a custom Ollama Model directory?"
 	if PromptUser yN "Default Ollama model directory is: /usr/share/ollama/.ollama/models" 0 0 "y/N"; then
 		PromptUser dir "Please enter the storage directory for installed Ollama models" 0 0 "/path/to/directory"
@@ -100,6 +120,7 @@ Setup(){
 	if id "$defaultUser" &>/dev/null; then
 		userdel $defaultUser
 		groupdel $defaultUser
+		Log "SETUP | Deleted user and group $defaultUser" $logFile
 	fi
 
 	if [[ -d $defaultDir ]]; then
@@ -119,6 +140,20 @@ Setup(){
 	SetVar backupDirectory $backupDirectory "$configFile" str
 	SetVar modelFiles $defaultDir/config/modelfiles "$configFile" str
 	SetVar ollamaModelsDirectory $ollamaModelsDirectory "$configFile" str
+	SetVar maxBackupNumber $maxBackupNumber "$configFile" str
+	SetVar autoBackups true "$configFile" str
+	SetVar backupFrequency "weekly" "$configFile" str
+	Log "SETUP | SetVar configFile=$configFile" $logFile
+	Log "SETUP | SetVar defaultUser=$defaultUser" $logFile
+	Log "SETUP | SetVar defaultDir=$defaultDir" $logFile
+	Log "SETUP | SetVar httpPort=$httpPort" $logFile
+	Log "SETUP | SetVar ggufDirectory=$ggufDirectory" $logFile
+	Log "SETUP | SetVar backupDirectory=$backupDirectory" $logFile
+	Log "SETUP | SetVar modelFiles=$defaultDir/config/modelfiles" $logFile
+	Log "SETUP | SetVar ollamaModelsDirectory=$ollamaModelsDirectory" $logFile
+	Log "SETUP | SetVar maxBackupNumber=$maxBackupNumber" $logFile
+	Log "SETUP | SetVar autoBackups=true" $logFile
+	Log "SETUP | SetVar backupFrequency=weekly" $logFile
 	
 	curl -fsSL https://ollama.com/install.sh | sh
 	
@@ -134,10 +169,12 @@ Setup(){
 		Log "SETUP | Using ufw to unblock $httpPort" $logFile
 		ufw allow $httpPort/tcp
 		ufw reload
+		Log "SETUP | Used ufw to set port 8080 to allow" $logFile
 	elif [ -x "$(command -v firewall-cmd)" ]; then
 		Log "SETUP | Using firewalld to unblock $httpPort" $logFile
 		firewall-cmd --permanent --add-port=$httpPort/tcp
 		firewall-cmd --reload
+		Log "SETUP | Used firewallD to set port 8080 to allow" $logFile
 	fi
 
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
@@ -153,8 +190,11 @@ Setup(){
 	fi
 
 	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
+	cp -f $DIRECTORY/configs/llaman-backup.service $serviceDirectory/
+	cp -f $DIRECTORY/configs/llaman-backup.timer $serviceDirectory/
 	SetVar serviceDirectory $serviceDirectory "$configFile" str
 	SetVar User $defaultUser $serviceDirectory/open-webui.service str
+	Log "SETUP | SetVar serviceDirectory=$serviceDirectory" $logFile
 
 	cd $defaultDir
 	git clone https://github.com/open-webui/open-webui.git
@@ -174,10 +214,11 @@ Setup(){
 
 	chmod -Rf 770 $defaultDir
 	
-	systemctl enable --now ollama open-webui
+	systemctl enable --now ollama open-webui llaman-backup.timer
 	
 	echo "> Ollama and Open-WebUI is now installed"
 	echo "> Please visit http://localhost:8080"
+	Log "SETUP | Setup finished" $logFile
 }
 
 if [[ $1 == "-U" ]]; then
