@@ -7,7 +7,7 @@ defaultUser=open-webui
 defaultDir=/opt/open-webui
 logFile=$defaultDir/log/llaman.log
 
-source $DIRECTORY/scripts/base_functions.sh
+source $DIRECTORY/scripts/llaman-functions
 
 Update(){
 	HasSudo
@@ -15,7 +15,7 @@ Update(){
 	source $configFile
 	
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
-	cp -f $DIRECTORY/scripts/base_functions.sh /usr/bin/
+	cp -f $DIRECTORY/scripts/llaman-functions /usr/bin/
 	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
 	cp -f $DIRECTORY/configs/modelfiles/* $defaultDir/config/modelfiles/
 	cp -f $DIRECTORY/configs/llaman-backup.service $serviceDirectory/
@@ -31,6 +31,17 @@ Update(){
 		Log "SETUP-UPDATE | SetVar maxBackupNumber=$maxBackupNumer" $logFile
 		Log "SETUP-UPDATE | SetVar autoBackups=$true" $logFile
 		Log "SETUP-UPDATE | SetVar backupFrequency=weekly" $logFile
+	fi
+	
+	if [ -x "$(command -v apt)" ] || [ -x "$(command -v pacman)" ]; then
+		cp $DIRECTORY/jellyman.1 /usr/share/man/man1/
+	elif [ -x "$(command -v dnf)" ] || [ -x "$(command -v zypper)" ]; then 
+		cp $DIRECTORY/jellyman.1 /usr/local/share/man/man1/
+	fi
+
+
+	if [[ -f /usr/bin/base_functions.sh ]]; then
+		rm -f /usr/bin/base_functions.sh
 	fi
 	
 	systemctl daemon-reload
@@ -176,12 +187,19 @@ Setup(){
 		firewall-cmd --reload
 		Log "SETUP | Used firewallD to set port 8080 to allow" $logFile
 	fi
+	
+	if [ -x "$(command -v apt)" ] || [ -x "$(command -v pacman)" ]; then
+		cp $DIRECTORY/llaman.1 /usr/share/man/man1/
+	elif [ -x "$(command -v dnf)" ] || [ -x "$(command -v zypper)" ]; then 
+		cp $DIRECTORY/llaman.1 /usr/local/share/man/man1/
+	fi
+
 
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
-	cp -f $DIRECTORY/scripts/base_functions.sh /usr/bin/
+	cp -f $DIRECTORY/scripts/llaman-functions /usr/bin/
 	cp -rf $DIRECTORY/configs/modelfiles $defaultDir/config/
 	chmod +x /usr/bin/llaman
-	chmod +x /usr/bin/base_functions.sh
+	chmod +x /usr/bin/llaman-functions
 
 	if [ -d /usr/lib/systemd/system ]; then
 		serviceDirectory="/usr/lib/systemd/system"

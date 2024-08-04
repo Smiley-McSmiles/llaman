@@ -1,5 +1,5 @@
 #!/bin/bash
-source /usr/bin/base_functions.sh
+source /usr/bin/llaman-functions
 llamanVersion=0.1.2
 configFile=/opt/open-webui/config/llaman.conf
 
@@ -17,6 +17,7 @@ PARAMETERS:
 -s,    --start            Start Ollama and Open-WebUI
 -S,    --stop             Stop Ollama and Open-WebUI
 -r,    --restart          Restart Ollama and Open-WebUI
+-t,    --status           Get status of ollama.service and open-webui.service.
 -I,    --install          Install a downloaded .gguf model
 -R,    --remove           Remove model from Ollama
 -D,    --download         Download .gguf file from https://huggingface.co
