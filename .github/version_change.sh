@@ -8,6 +8,5 @@ read newVersion
 
 sed -i "s|v$currentVersion|v$newVersion|g" ../README.md
 sed -i "s|v$currentVersion|v$newVersion|g" ../llaman.1
-sed -i "s|v$currentVersion|v$newVersion|g" ../scripts/llaman
-sed -i "s|v$currentVersion|v$newVersion|g" ../setup.sh
-sed -i "s|v$currentVersion|v$newVersion|g" ./version
+sed -i "s|$currentVersion|$newVersion|g" ../scripts/llaman
+sed -i "s|$currentVersion|$newVersion|g" ../setup.sh
