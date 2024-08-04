@@ -26,7 +26,7 @@ InstallDependencies()
 	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) screen"
 	packagesNeededArch="npm python-devtools make automake gcc linux-headers curl screen"
 	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel curl screen"
-	echo "> Preparing to install needed dependancies for Jellyfin..."
+	echo "> Preparing to install needed dependancies for LLaman and Open-WebUI..."
 
 	if [[ -f /etc/os-release ]]; then
 		source /etc/os-release
