@@ -32,6 +32,7 @@ cd ~/
 * **Remove** - Remove a model from Ollama
 * **Install** - Install a downloaded .gguf model.
 * **Backup** - Input a directroy to output a backup archive.
+* **Backup Utility - Start the Backup Utility to set up automatic backups
 * **Import** - Import a .tar file to pick up where you left off on another system.
 * **Get Version** - Get the current installed version of LLaMan, Ollama, and Open-WebUI.
 * **View Logs** - Select from a list of logs to view.
@@ -42,21 +43,23 @@ cd ~/
 llaman [PARAMETER]
 
 PARAMETERS:
--b = Backup Open-WebUI users and settings
--i = Import Open-WebUI archive
--e = Enable Ollama and Open-WebUI
--d = Disable Ollama and Open-WebUI
--s = Start Ollama and Open-WebUI
--S = Stop Ollama and Open-WebUI
--r = Restart Ollama and Open-WebUI
--I = Install a downloaded .gguf model
--R = remove model from Ollama
--D = download .gguf file from https://huggingface.co
--u = update Ollama and Open-Webui
--v = get LLaMan, Ollama, and Open-Webui version
--h = display this help menu
--X = Uninstall LLaMan, Ollama, and Open-Webui
-"Example: sudo llaman -d
+-b,    --backup           Backup Open-WebUI users and settings
+-bu,   --backup-utility   Start the backup utility
+-i,    --import           Import Open-WebUI archive
+-e,    --enable           Enable Ollama and Open-WebUI
+-d,    --disable          Disable Ollama and Open-WebUI
+-s,    --start            Start Ollama and Open-WebUI
+-S,    --stop             Stop Ollama and Open-WebUI
+-r,    --restart          Restart Ollama and Open-WebUI
+-I,    --install          Install a downloaded .gguf model
+-R,    --remove           Remove model from Ollama
+-D,    --download         Download .gguf file from https://huggingface.co
+-u,    --update           Update Ollama and Open-Webui
+-v,    --version          Get LLaMan, Ollama, and Open-Webui version
+-vl,   --view-logs        View LLaMan logs
+-h,    --help             Display this help menu
+-X,    --uninstall        Uninstall LLaMan, Ollama, and Open-Webui
+Example: sudo llaman -e
 ```
 
 ### License

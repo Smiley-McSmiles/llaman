@@ -3,6 +3,31 @@ source /usr/bin/base_functions.sh
 llamanVersion=0.1.2
 configFile=/opt/open-webui/config/llaman.conf
 
+help="
+LLaMan $llamanVersion
+
+llaman [PARAMETER]
+
+PARAMETERS:
+-b,    --backup           Backup Open-WebUI users and settings
+-bu,   --backup-utility   Start the backup utility
+-i,    --import           Import Open-WebUI archive
+-e,    --enable           Enable Ollama and Open-WebUI
+-d,    --disable          Disable Ollama and Open-WebUI
+-s,    --start            Start Ollama and Open-WebUI
+-S,    --stop             Stop Ollama and Open-WebUI
+-r,    --restart          Restart Ollama and Open-WebUI
+-I,    --install          Install a downloaded .gguf model
+-R,    --remove           Remove model from Ollama
+-D,    --download         Download .gguf file from https://huggingface.co
+-u,    --update           Update Ollama and Open-Webui
+-v,    --version          Get LLaMan, Ollama, and Open-Webui version
+-vl,   --view-logs        View LLaMan logs
+-h,    --help             Display this help menu
+-X,    --uninstall        Uninstall LLaMan, Ollama, and Open-Webui
+Example: sudo llaman -e
+"
+
 Backup() {
 	HasSudo
 	source $configFile
@@ -17,17 +42,170 @@ Backup() {
 	cp -rf $defaultDir/open-webui/backend/data $defaultDir/backup/
 	cp -rf $defaultDir/config $defaultDir/backup/
 	cp -rf $defaultDir/log $defaultDir/backup/
+	cp -rf $serviceDirectory/llaman-backup.timer $defaultDir/backup/
 	time tar cf "$_tarPath" /opt/open-webui/backup
 	
 	rm -rf $defaultDir/backup
 	
-	USER1=$(stat -c '%U' "$_backupDirectory")
+	USER1=$(stat -c '%U' "$backupDirectory")
 	chown -f $USER1:$USER1 "$_tarPath"
 	chmod -f 770 "$_tarPath"
 	
 	echo "> Your backup is:"
 	_tarSize=$(du -h "$_tarPath")
 	echo "> Size: $_tarSize"
+	
+	Log "BACKUP | Created backup $_tarPath" $logFile
+}
+
+BackupAuto(){
+	HasSudo
+	source $configFile
+	
+	Backup
+	
+	tarList=$(ls -1 "$backupDirectory"/llaman-backup*.tar)
+	newestTar=$(echo "$tarList" | tail -n 1)
+	oldestTar=$(echo "$tarList" | head -n 1)
+	tarCount=$(echo "$tarList" | wc -l)
+
+	while [[ $tarCount -gt $maxBackupNumber ]]; do
+		Log "BACKUP-AUTO | More than $maxBackupNumber, removing $oldestTar" $logFile
+		echo "> There are $tarCount backups."
+		echo "> Since there are more than $maxBackupNumber backups..."
+		echo "> LLaMan is removing $oldestTar"
+		# echo "> NewBackup=$newestTar"
+		rm -f "$oldestTar"
+		tarList=$(ls -1 "$backupDirectory"/llaman-backup*.tar)
+		newestTar=$(echo "$tarList" | tail -n 1)
+		oldestTar=$(echo "$tarList" | head -n 1)
+		tarCount=$(echo "$tarList" | wc -l)
+	done
+}
+
+BackupUtility()
+{
+	HasSudo
+	while true; do
+		clear
+		optionNumber=
+		autoBackupSwitch=
+		source $configFile
+		
+		if [[ ! -d $backupDirectory ]]; then
+			PromptUser dir "> Please enter your desired directory for backup archives"
+			backupDirectory="$promptResult"
+			PromptUser num "> Please enter your desired maximum number of backup archives" 1 20 "1-20"
+			maxBackupNumber=$promptResult
+			systemctl enable --now llaman-backup.timer
+			SetVar backupDirectory "$backupDirectory" "$configFile" str
+			SetVar maxBackupNumber $maxBackupNumber "$configFile" str
+			SetVar autoBackups true "$configFile" str
+			SetVar backupFrequency "weekly" "$configFile" str
+			Log "BACKUP-UTILITY | Setup Backup Utility at $backupDirectory max of $maxBackupNumber done weekly" $logFile
+		fi
+		
+		source $configFile
+		
+		if $autoBackups; then
+			autoBackupSwitch="ON"
+		else
+			autoBackupSwitch="OFF"
+		fi
+		echo
+		echo "> Automatic backups are $autoBackupSwitch"
+		echo
+		echo "> 1. Enable automatic backups"
+		echo "> 2. Disable automatic backups"
+		echo "> 3. Change backup folder"
+		echo "> 4. Change max backups [ $maxBackupNumber ]"
+		echo "> 5. Change frequency of backups [ $backupFrequency ]"
+		echo "> 6. Create a llaman-backup.tar archive"
+		echo "> 7. EXIT"
+		echo
+		PromptUser num "> Please select the number corresponding with the option you want to select." 1 7 "1-7"
+		optionNumber=$promptResult
+		echo
+		case $optionNumber in
+			"1")
+				# enable auto-backups
+				systemctl enable --now llaman-backup.timer
+				SetVar autoBackups true "$configFile" str
+				Log "BACKUP-UTILITY | Automatic backups enabled" $logFile
+				;;
+			"2")
+				# disable auto-backups
+				systemctl disable --now llaman-backup.timer
+				SetVar autoBackups false "$configFile" str
+				Log "BACKUP-UTILITY | Automatic backups disabled" $logFile
+				;;
+			"3")
+				# change backup folder
+				if [[ -n $backupDirectory ]]; then
+					echo "> Current directory for backups is $backupDirectory"
+				fi
+				PromptUser dir "> Please enter your desired directory for backup archives"
+				backupDirectory="$promptResult"
+				SetVar "backupDirectory" "$backupDirectory" "$configFile"
+				Log "BACKUP-UTILITY | Automatic backup location changed to $backupDirectory" $logFile
+				;;
+			"4")
+				# change max backups
+				if [[ -n $maxBackupNumber ]]; then
+					echo "> Current maximum backups allowed is $maxBackupNumber"
+				fi
+				PromptUser num "> Please enter your desired maximum number of backup archives" 1 50 "1-50"
+				maxBackupNumber=$promptResult
+				SetVar maxBackupNumber "$maxBackupNumber" "$configFile"
+				Log "BACKUP-UTILITY | Max automatic backups changed to $maxBackupNumber " $logFile
+				;;
+			"5")
+				# change frequency of backups
+				echo "> Automatic backups will be done on a $backupFrequency basis."
+				echo
+				echo "> 1. Daily backups"
+				echo "> 2. Weekly backups"
+				echo "> 3. Monthly backups"
+				echo
+				PromptUser num "> Please select the number corresponding with the option you want to select." 1 3 "1-3"
+				_optionNumber=$promptResult
+				echo
+				llamanBackupTimer=$serviceDirectory/llaman-backup.timer
+				case $_optionNumber in
+					"1")
+						SetVar backupFrequency "daily" "$configFile"
+						sed -i "s|OnCalendar.*|OnCalendar=*-*-* 01:00:00|g" $llamanBackupTimer
+						echo "> Backups will now be created every day at 1:00 AM"
+						read -p "> Press ENTER to exit" ENTER
+						Log "BACKUP-UTILITY | Frequency of automatic backups changed to daily" $logFile
+						;;
+					"2")
+						SetVar backupFrequency "weekly" "$configFile"
+						sed -i "s|OnCalendar.*|OnCalendar=Sun *-*-* 01:00:00|g" $llamanBackupTimer
+						echo "> Backups will now be created every Sunday at 1:00 AM"
+						read -p "> Press ENTER to exit" ENTER
+						Log "BACKUP-UTILITY | Frequency of automatic backups changed to weekly" $logFile
+						;;
+					"3")
+						SetVar backupFrequency "monthly" "$configFile"
+						sed -i "s|OnCalendar.*|OnCalendar=*-*-01 01:00:00|g" $llamanBackupTimer
+						echo "> Backups will now be created on the 1st of every month at 1:00 AM"
+						read -p "> Press ENTER to exit" ENTER
+						Log "BACKUP-UTILITY | Frequency of automatic backups changed to monthly" $logFile
+						;;
+				esac
+				systemctl daemon-reload
+				systemctl restart llaman-backup.timer
+				;;
+			"6")
+				llaman -ba
+				exit
+				;;
+			"7")
+				exit
+				;;
+		esac
+	done
 }
 
 Import() {
@@ -35,7 +213,7 @@ Import() {
 	source $configFile
 	
 	importTarDir=$backupDirectory
-	PresentList "$importTarDir" "Please enter the number corresponding to the .tar you want to select." ".tar"
+	PresentList "$importTarDir" "Please enter the number corresponding to the .tar you want to select." "llaman-backup-"
 	importTar=$importTarDir/$presentListResult
 	
 	llaman -S
@@ -43,12 +221,14 @@ Import() {
 	cp -rf $defaultDir/backup/data $defaultDir/open-webui/backend/ 
 	cp -rf $defaultDir/backup/config $defaultDir/
 	cp -rf $defaultDir/backup/log $defaultDir/
+	cp -rf $defaultDir/backup/llaman-backup.timer $serviceDirectory/
 	
 	rm -rf /$defaultDir/backup
 
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
 	llaman -s
+	Log "IMPORT | Imported $importTar" $logFile
 }
 
 InstallModel () {
@@ -73,6 +253,7 @@ InstallModel () {
 	sed -i "s|FROM /.*|FROM $selectedFile|g" $selectedModelFile
 
 	ollama create $nameOfLLM -f $selectedModelFile
+	Log "INSTALL-MODEL | Installed model $nameOfLLM" $logFile
 }
 
 RemoveModel () {
@@ -86,11 +267,12 @@ RemoveModel () {
 	read -p "Please enter the number corresponding to the LLM you want to remove: " LLMNumber
 
 	if [ $LLMNumber -gt $num ] || [ $LLMNumber -lt 1 ] ; then
-		  echo "Invalid selection. Please choose a number within the range of available LLMs."
+		echo "Invalid selection. Please choose a number within the range of available LLMs."
 	else
-		  selectedFile=$(ollama list | grep -o ".*:latest" | head -n $LLMNumber | tail -n 1)
-		  echo "Selected LLM: $selectedFile"
-		  ollama rm $selectedFile
+		selectedFile=$(ollama list | grep -o ".*:latest" | head -n $LLMNumber | tail -n 1)
+		echo "Selected LLM: $selectedFile"
+		ollama rm $selectedFile
+		Log "REMOVE-MODEL | Removed model $selectedFile" $logFile
 	fi
 }
 
@@ -105,6 +287,12 @@ DownloadModel () {
 		fileName=$(echo $URL | rev | cut -d / -f 1 | rev)
 		echo "screen -dmS llm-downloading bash -c 'wget -O ${ggufDirectory}/${fileName} ${URL}'"
 		screen -dmS llm-downloading bash -c "wget -O $ggufDirectory/$fileName $URL"
+
+		USER1=$(stat -c '%U' "$ggufDirectory")
+		chown -f $USER1:$USER1 "$ggufDirectory/$fileName"
+		chmod -f 770 "$ggufDirectory/$fileName"
+
+		Log "DOWNLOAD-MODEL | Downloaded model $fileName" $logFile
 		exit
 	else
 	    echo "> Please provide a link to a .gguf file"
@@ -163,12 +351,14 @@ Update() {
 	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
+		Log "UPDATE | Updated Ollama to v$latestOllamaVersion" $logFile
 	else
 		echo "> The latest Ollama version $latestOllamaVersion is already installed."
 	fi
 
 	if [[ ! "$installedWebUIVersion" == "$latestWebUIVersion" ]]; then
 		UpdateWeb
+		Log "UPDATE | Updated Open-WebUI to v$latestWebUIVersion" $logFile
 	else
 		echo "> The latest Open Web-UI version $latestWebUIVersion is already installed."
 	fi
@@ -204,6 +394,29 @@ GetWebUIVersion() {
 	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "[0-9].[0-9]\.[0-9][0-9]")
 }
 
+Control(){
+	HasSudo
+	source $configFile
+	
+	case "$1" in
+		start) systemctl start ollama
+         	systemctl start open-webui
+         	Log "LLAMAN | Started Ollama and Open-webui" $logFile ;;
+		stop) systemctl stop ollama
+         	systemctl stop open-webui
+         	Log "LLAMAN | Stopped Ollama and Open-webui" $logFile ;;
+		enable) systemctl enable ollama
+         	systemctl enable open-webui
+         	Log "LLAMAN | Enabled Ollama and Open-webui" $logFile ;;
+		disable) systemctl disable ollama
+         	systemctl disable open-webui
+         	Log "LLAMAN | Disabled Ollama and Open-webui" $logFile ;;
+		restart) systemctl restart ollama
+         	systemctl restart open-webui
+         	Log "LLAMAN | Restarted Ollama and Open-webui" $logFile ;;
+	esac
+}
+
 Uninstall(){
 	HasSudo
 	source $configFile
@@ -229,26 +442,7 @@ Uninstall(){
 }
 
 Help () {
-	echo "LLaMan $llamanVersion"
-	echo ""
-	echo "llaman [PARAMETER]"
-	echo
-	echo "PARAMETERS:"
-	echo "-b = Backup Open-WebUI users and settings"
-	echo "-i = Import Open-WebUI archive"
-	echo "-e = Enable Ollama and Open-WebUI"
-	echo "-d = Disable Ollama and Open-WebUI"
-	echo "-s = Start Ollama and Open-WebUI"
-	echo "-S = Stop Ollama and Open-WebUI"
-	echo "-r = Restart Ollama and Open-WebUI"
-	echo "-I = Install a downloaded .gguf model"
-	echo "-R = remove model from Ollama"
-	echo "-D = download .gguf file from https://huggingface.co"
-	echo "-u = update Ollama and Open-Webui"
-	echo "-v = get LLaMan, Ollama, and Open-Webui version"
-	echo "-h = display this help menu"
-	echo "-X = Uninstall LLaMan, Ollama, and Open-Webui"
-	echo "Example: sudo llaman -d"
+echo "$help"
 }
 
 ###############################################################################
@@ -257,27 +451,27 @@ Help () {
 if [ -n "$1" ]; then
    while [ -n "$1" ]; do
       case "$1" in
-         -b) Backup ;;
-         -i) Import ;;
-         -e) systemctl enable ollama
-         	systemctl enable open-webui ;;
-         -d) systemctl disable ollama
-         	systemctl disable open-webui ;;
-         -S) systemctl stop ollama
-         	systemctl stop open-webui ;;
-         -s) systemctl start ollama
-         	systemctl start open-webui ;;
-         -r) systemctl restart ollama
-         	systemctl restart open-webui ;;
-         -t) systemctl status ollama
+         -b | --backup) Backup ;;
+         -ba | --backup-auto) BackupAuto ;;
+         -bu | --backup-utility) BackupUtility ;;
+         -i | --import) Import ;;
+         -e | --enable) Control "enable" ;;
+         -d | --disable) Control "disable" ;;
+         -S | --stop) Control "stop" ;;
+         -s | --start) Control "start" ;;
+         -r | --restart) Control "restart" ;;
+         -t | --status) systemctl status ollama
          	systemctl status open-webui ;;
-         -I) InstallModel ;;
-         -R) RemoveModel ;;
-         -D) DownloadModel ;;
-         -u) Update ;;
-         -v) GetVersions ;;
-         -X) Uninstall ;;
-         -h) Help ;;
+         -I | --install) InstallModel ;;
+         -R | --remove) RemoveModel ;;
+         -D | --download) DownloadModel ;;
+         -u | --update) Update ;;
+         -v | --version) GetVersions ;;
+         -vl | --view-logs) HasSudo
+         		source $configFile
+         		ViewLog "$defaultDir/log" ;;
+         -X | --uninstall) Uninstall ;;
+         -h | --help) Help ;;
          *) echo "Option $1 not recognized"
             Help ;;
       esac

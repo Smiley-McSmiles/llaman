@@ -1,0 +1,7 @@
+[Unit]
+Description="LLaMan Backup"
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/llaman -ba
+
