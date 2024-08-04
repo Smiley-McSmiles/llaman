@@ -1,6 +1,7 @@
 #!/bin/bash
 
 declare -g promptResult=null
+declare -g presentListResult=null
 
 PromptUser()
 {
@@ -316,16 +317,33 @@ Log()
 	fi
 }
 
+PresentList()
+{
+	list="$1"
+	prompt="$2"
+	query="$3"
+	
+	if [[ -d "$list" ]]; then
+		list="$(ls -1 $list | grep "$query")"
+	fi
+	
+	listNumbered=$(echo "$list" | cat -n)
+	itemsInList=$(echo "$list" | wc -l)
+	
+	echo "$listNumbered"
+	PromptUser num "$prompt" 1 $itemsInList "1-$itemsInList"
+	selectedNumber=$promptResult
+	selectedItem=$(echo "$list" | head -n $selectedNumber | tail -n 1)
+	presentListResult="$selectedItem"
+
+# PresentList "$listOfItems" "Please enter the number for the item you want to select." "(optional) search query"
+# itemSelected=$presentListResult
+}
+
 ViewLog()
 {
 	logDir=$1
-
-	listOfLogs=$(ls -1 $logDir)
-	listOfLogsNumbered=$(echo "$listOfLogs" | cat -n)
-	numberOfLogs=$(echo "$listOfLogs" | wc -l)
-	echo "$listOfLogsNumbered"
-	PromptUser num "> Please enter the number corresponding with the log you wish to view." 1 $numberOfLogs "1-$numberOfLogs"
-	logToViewNumber=$promptResult
-	logToView=$(echo "$listOfLogs" | head -n $logToViewNumber | tail -n 1)
-	less -FS $logDir/$logToView
+	PresentList "$logDir" "> Please enter the number corresponding with the log you wish to view."
+	logToView=$presentListResult
+	less +G -FS $logDir/$logToView
 }

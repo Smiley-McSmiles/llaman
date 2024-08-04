@@ -1,4 +1,4 @@
-> LLaMan v0.1.0 - A Ollama and Open-WebUI manager written in BASH
+> LLaMan v0.1.1 - An Ollama and Open-WebUI manager written in BASH
 
 > Tested on Fedora 40
 
@@ -43,13 +43,14 @@ llaman [PARAMETER]
 
 PARAMETERS:
 -b = Backup Open-WebUI users and settings
+-i = Import Open-WebUI archive
 -e = Enable Ollama and Open-WebUI
 -d = Disable Ollama and Open-WebUI
 -s = Start Ollama and Open-WebUI
 -S = Stop Ollama and Open-WebUI
 -r = Restart Ollama and Open-WebUI
--i = Install a downloaded .gguf model
--r = remove model from Ollama
+-I = Install a downloaded .gguf model
+-R = remove model from Ollama
 -D = download .gguf file from https://huggingface.co
 -u = update Ollama and Open-Webui
 -v = get LLaMan, Ollama, and Open-Webui version

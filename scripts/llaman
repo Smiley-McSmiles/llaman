@@ -1,21 +1,19 @@
 #!/bin/bash
 source /usr/bin/base_functions.sh
-llamanVersion=0.1.0
-configFile=/opt/open-webui/config/open-webui.conf
+llamanVersion=0.1.1
+configFile=/opt/open-webui/config/llaman.conf
 
 Backup() {
 	HasSudo
 	source $configFile
 	_date=$(date +%m-%d-%Y-%H:%M)
 	_fileName="llaman-backup-$_date.tar"
-	
-	PromptUser dir "Enter a directory to output the .tar archive" 0 0 "/path/to/directory"
-	_backupDirectory=$promptResult
-	_tarPath=$_backupDirectory/$_fileName
+	_tarPath=$backupDirectory/$_fileName
 	
 	if [[ ! -d /opt/open-webui/backup ]]; then
 		mkdir /opt/open-webui/backup
 	fi
+	
 	cp -rf $defaultDir/open-webui/backend/data $defaultDir/backup/
 	cp -rf $defaultDir/config $defaultDir/backup/
 	cp -rf $defaultDir/log $defaultDir/backup/
@@ -28,7 +26,7 @@ Backup() {
 	chmod -f 770 "$_tarPath"
 	
 	echo "> Your backup is:"
-	_tarSize=$(du -h "$tarPath")
+	_tarSize=$(du -h "$_tarPath")
 	echo "> Size: $_tarSize"
 }
 
@@ -36,10 +34,12 @@ Import() {
 	HasSudo
 	source $configFile
 	
-	PromptUser file "Enter a path to llaman-backup.tar" 0 0 "/path/to/llaman-backup.tar"
-	importTar=$promptResult
-
-	tar xf $importTar -C $defaultDir
+	importTarDir=$backupDirectory
+	PresentList "$importTarDir" "Please enter the number corresponding to the .tar you want to select." ".tar"
+	importTar=$importTarDir/$presentListResult
+	
+	llaman -S
+	tar xf $importTar -C /
 	cp -rf $defaultDir/backup/data $defaultDir/open-webui/backend/ 
 	cp -rf $defaultDir/backup/config $defaultDir/
 	cp -rf $defaultDir/backup/log $defaultDir/
@@ -48,40 +48,30 @@ Import() {
 
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
+	llaman -s
 }
 
 InstallModel () {
 	HasSudo
 	source $configFile
-	selectedModelFile=""
-	echo "Listing files in the current directory"
-	ggufNum=0
-	modelFileNum=0
-	
-	for fileName in $ggufDirectory/*.gguf; do
-		let ggufNum++
-		fileName=$(echo "$fileName" | rev | cut -d / -f 1 | rev)
-		echo "$ggufNum. $fileName"
-	done
-	
-	PromptUser num "Please enter the number corresponding to the file you want to select" 1 $ggufNum "1-$ggufNum"
-	fileNumber=$promptResult
+	selectedModelFile="$defaultDir/config/modelfiles/DEFAULT"
 
-	for fileName in $defaultDir/config/modelfiles/*; do
-		let modelFileNum++
-		fileName=$(echo "$fileName" | rev | cut -d / -f 1 | rev)
-		echo "$modelFileNum. $fileName"
-	done
+	PresentList "$ggufDirectory" "> Please enter the number corresponding to the .gguf you want to select." ".gguf"
+	selectedFile="$ggufDirectory/$presentListResult"
 
-	PromptUser num "Please enter the number corresponding to the model file you want to select" 1 $ggufNum "1-$ggufNum"
-	modelFile=$promptResult
-	
-	selectedFile=$(ls $ggufDirectory/*.gguf | head -n $fileNumber | tail -n 1)
-	selectedModelFile=$(ls $defaultDir/config/modelfiles/* | head -n $modelFile | tail -n 1)
-	nameOfLLM=$(echo "$selectedFile" | rev | cut -d / -f 1 | rev | sed -e "s|.gguf||g")
+	if PromptUser Yn "> Go with the DEFAULT modelfile?" 0 0 "Y/n"; then
+		echo "> Using DEFAULT modelfile"
+	else
+		PresentList "$defaultDir/config/modelfiles" "Please enter the number corresponding to the modelfile you want to select."
+		selectedModelFile="$defaultDir/config/modelfiles/$presentListResult"
+	fi
+
+	nameOfLLM=$(echo "$selectedFile" | rev | cut -d / -f 1 | rev | sed -r "s|.gguf||g")
 	echo "Selected file: $selectedFile"
 	echo "Name of LLM: $nameOfLLM"
+
 	sed -i "s|FROM /.*|FROM $selectedFile|g" $selectedModelFile
+
 	ollama create $nameOfLLM -f $selectedModelFile
 }
 
@@ -201,13 +191,22 @@ Uninstall(){
 	echo "Uninstalling LLaMan, Ollama, and Open-Webui"
 	echo "You have 10 seconds to cancel with CTRL + C..."
 	Countdown 10
+	echo "TOO LATE!"
 	
 	llaman -d -S
-	groupdel $defaultUser
 	userdel $defaultUser
-	groupdel ollama
 	userdel ollama
-	rm -rf $serviceLocation/open-webui.service $serviceLocation/ollama.service /usr/local/bin/ollama $ollamaModelsDirectory /usr/share/ollama /usr/bin/llaman 
+	sleep 3
+	groupdel $defaultUser
+	groupdel ollama
+	sleep 2
+	rm -f $serviceLocation/open-webui.service
+	rm -f $serviceLocation/ollama.service
+	rm -r /usr/local/bin/ollama
+	rm -rf $defaultDir
+	rm -rf $ollamaModelsDirectory
+	rm -r /usr/share/ollama
+	rm -r /usr/bin/llaman 
 }
 
 Help () {
@@ -217,14 +216,15 @@ Help () {
 	echo
 	echo "PARAMETERS:"
 	echo "-b = Backup Open-WebUI users and settings"
+	echo "-i = Import Open-WebUI archive"
 	echo "-e = Enable Ollama and Open-WebUI"
 	echo "-d = Disable Ollama and Open-WebUI"
 	echo "-s = Start Ollama and Open-WebUI"
 	echo "-S = Stop Ollama and Open-WebUI"
 	echo "-r = Restart Ollama and Open-WebUI"
-	echo "-i = Install a downloaded .gguf model"
-	echo "-r = remove model from Ollama"
-	echo "-d = download .gguf file from https://huggingface.co"
+	echo "-I = Install a downloaded .gguf model"
+	echo "-R = remove model from Ollama"
+	echo "-D = download .gguf file from https://huggingface.co"
 	echo "-u = update Ollama and Open-Webui"
 	echo "-v = get LLaMan, Ollama, and Open-Webui version"
 	echo "-h = display this help menu"
@@ -239,6 +239,7 @@ if [ -n "$1" ]; then
    while [ -n "$1" ]; do
       case "$1" in
          -b) Backup ;;
+         -i) Import ;;
          -e) systemctl enable ollama
          	systemctl enable open-webui ;;
          -d) systemctl disable ollama
@@ -251,8 +252,8 @@ if [ -n "$1" ]; then
          	systemctl restart open-webui ;;
          -t) systemctl status ollama
          	systemctl status open-webui ;;
-         -i) InstallModel ;;
-         -r) RemoveModel ;;
+         -I) InstallModel ;;
+         -R) RemoveModel ;;
          -D) DownloadModel ;;
          -u) Update ;;
          -v) GetVersions ;;
