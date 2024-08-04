@@ -1,0 +1,83 @@
+." Process this file with
+." groff -man -Tascii llaman.1
+."
+.TH LLaMaN
+
+.Sh NAME
+.B LLaMan - An Ollama and Open-WebUI manager written in BASH
+
+.SH VERSION
+.B > LLaMan v0.1.3
+
+.SH SYNOPSIS
+.B llaman
+
+.SH DESCRIPTION
+.B LLaMan
+is a lightweight BASH CLI (Command Line Interface) tool for installing and managing Ollama and Open-WebUI.
+
+.SH USAGE
+.B SYNTAX
+- LLaMaN -[COMMAND] [PARAMETER]
+.TP
+.SS COMMANDS
+.TP
+.B -b, --backup                 Create llaman-backup.tar archive.
+.TP
+.B -bu, --backup-utility        Launch the automatic Backup Utility.
+.TP
+.B -i, --import                 Launch the import backup utility.
+.TP
+.B -e, --enable                 Enable Ollama and Open-WebUI on System Start.
+.TP
+.B -d, --disable                Disable Ollama and Open-WebUI on System Start.
+.TP
+.B -s, --start                  Start Ollama and Open-WebUI.
+.TP
+.B -S, --stop                   Stop Ollama and Open-WebUI.
+.TP
+.B -r, --restart                Restart Ollama and Open-WebUI.
+.TP
+.B -t, --status                 Status of Ollama and Open-WebUI.
+.TP
+.B -I, --install                Install a downloaded .gguf model.
+.TP
+.B -R, --remove                 Remove a model from Ollama
+.TP
+.B -D, --download               Download a .gguf file from https://huggingface.co
+.TP
+.B -u, --update                 Update/check for updates for LLaMan, Ollama, and Open-WebUI
+.TP
+.B -v, --version                Get the current installed version of Jellyfin.
+.TP
+.B -vl, --view-log              Choose from a list of logs to view.
+.TP
+.B -h, --help                   Print this Help.
+.TP
+.B -X, --uninstall              Uninstall LLaMan, Ollama and Open-WebUI Completely.
+
+.SH EXAMPLE
+.TP
+.B 'sudo llaman -e -s -t'
+
+.SH FILES
+.TP
+.I
+/opt/open-webui
+.TP
+.I
+/usr/bin/llaman
+.TP
+.I
+/usr/bin/llaman-functions
+
+.SH COPYRIGHT
+.PP
+Copyright 2021-2024 WOOSAH (Smiley McSmiles). All rights reserved
+.PP
+https://www.github.com/Smiley-McSmiles/llaman
+
+.SH CREDITS
+.PP
+LLaMaN and this man page was created by WOOSAH <WOOSAAH@Proton.me>
+
