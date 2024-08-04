@@ -8,6 +8,18 @@ logFile=$defaultDir/log/llaman.log
 
 source $DIRECTORY/scripts/base_functions.sh
 
+Update(){
+	HasSudo
+	configFile=/opt/open-webui/config/llaman.conf
+	source $configFile
+	
+	cp -f $DIRECTORY/scripts/llaman /usr/bin/
+	cp -f $DIRECTORY/scripts/base_functions.sh /usr/bin/
+	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
+	cp -f $DIRECTORY/configs/modelfiles/* $defaultDir/config/modelfiles/
+	echo "> Done!"
+}
+
 InstallDependencies()
 {
 	packagesNeededRHEL="npm python3-devel make automake gcc gcc-c++ kernel-devel curl screen"
@@ -64,11 +76,11 @@ InstallDependencies()
 	fi
 }
 
-Setup()
-{
+Setup(){
+
 	HasSudo
 	configFile=$defaultDir/config/llaman.conf
-	serviceLocation=
+	serviceDirectory=
 	ollamaModelsDirectory=/usr/share/ollama/.ollama/models
 	
 	PromptUser dir "Please enter the storage directory for .gguf models" 0 0 "/path/to/directory"
@@ -135,14 +147,14 @@ Setup()
 	chmod +x /usr/bin/base_functions.sh
 
 	if [ -d /usr/lib/systemd/system ]; then
-		serviceLocation="/usr/lib/systemd/system"
+		serviceDirectory="/usr/lib/systemd/system"
 	else
-		serviceLocation="/etc/systemd/system"
+		serviceDirectory="/etc/systemd/system"
 	fi
 
-	cp -f $DIRECTORY/configs/open-webui.service $serviceLocation/
-	SetVar serviceLocation $serviceLocation "$configFile" str
-	SetVar User $defaultUser $serviceLocation/open-webui.service str
+	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
+	SetVar serviceDirectory $serviceDirectory "$configFile" str
+	SetVar User $defaultUser $serviceDirectory/open-webui.service str
 
 	cd $defaultDir
 	git clone https://github.com/open-webui/open-webui.git
@@ -168,4 +180,8 @@ Setup()
 	echo "> Please visit http://localhost:8080"
 }
 
-Setup
+if [[ $1 == "-U" ]]; then
+	Update
+else
+	Setup
+fi

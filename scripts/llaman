@@ -112,6 +112,9 @@ DownloadModel () {
 }
 
 UpdateWeb() {
+	HasSudo
+	source $configFile
+
 	cd $defaultDir
 	
 	if [[ -d open-webui-backup ]]; then
@@ -141,10 +144,22 @@ UpdateWeb() {
 Update() {
 	HasSudo
 	source $configFile
+	installedLlamanVersion="$llamanVersion"
+	latestLlamanVersion=$(GetLatestLlamanVersion)
 	installedOllamaVersion=$(GetOllamaVersion)
 	latestOllamaVersion=$(GetLatestOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
 	latestWebUIVersion=$(GetLatestWebUIVersion)
+	
+	if [[ ! "$installedLlamanVersion" == "$latestLlamanVersion" ]]; then
+		git clone https://github.com/Smiley-McSmiles/llaman
+		cd llaman
+		chmod ug+x setup.sh
+		sudo ./setup.sh -U
+		cd ~/
+	else
+		echo "> The latest LLaMan version $latestLlamanVersion is already installed."
+	fi
 	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
@@ -166,6 +181,10 @@ GetVersions() {
 	echo "LLaMan v$llamanVersion"
 	echo "Ollama v$installedOllamaVersion"
 	echo "Open-WebUI v$installedWebUIVersion"
+}
+
+GetLatestLlamanVersion() {
+	echo $(curl -fsSL https://raw.githubusercontent.com/Smiley-McSmiles/llaman/main/README.md | head -n 1 | cut -d " " -f 3 | sed -r "s|v||g")
 }
 
 GetLatestOllamaVersion() {
