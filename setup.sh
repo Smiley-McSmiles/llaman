@@ -34,9 +34,9 @@ Update(){
 	fi
 	
 	if [ -x "$(command -v apt)" ] || [ -x "$(command -v pacman)" ]; then
-		cp $DIRECTORY/jellyman.1 /usr/share/man/man1/
+		cp $DIRECTORY/llaman.1 /usr/share/man/man1/
 	elif [ -x "$(command -v dnf)" ] || [ -x "$(command -v zypper)" ]; then 
-		cp $DIRECTORY/jellyman.1 /usr/local/share/man/man1/
+		cp $DIRECTORY/llaman.1 /usr/local/share/man/man1/
 	fi
 
 
