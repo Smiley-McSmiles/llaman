@@ -38,7 +38,7 @@ cd ~/
 * **Uninstall** - Uninstalls LLaMan, Ollama, and Open-WebUI completely
 
 # Usage
-
+```
 llaman [PARAMETER]
 
 PARAMETERS:
@@ -57,8 +57,8 @@ PARAMETERS:
 -h = display this help menu
 -X = Uninstall LLaMan, Ollama, and Open-Webui
 "Example: sudo llaman -d
+```
 
 ### License
-
    This project is licensed under the [GPL V3.0 License](https://github.com/Smiley-McSmiles/llaman/blob/main/LICENSE).
 
