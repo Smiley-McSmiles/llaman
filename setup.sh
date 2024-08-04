@@ -74,17 +74,17 @@ Setup()
 	PromptUser dir "Please enter the storage directory for .gguf models" 0 0 "/path/to/directory"
 	ggufDirectory=$promptResult
 	
+	PromptUser dir "Please enter a directory for Open-WebUI backups." 0 0 "/path/to/directory"
+	backupDirectory=$promptResult
+
 	echo "Would you like a custom Ollama Model directory?"
 	if PromptUser yN "Default Ollama model directory is: /usr/share/ollama/.ollama/models" 0 0 "y/N"; then
-		PromptUser dir "Please enter the new storage directory for installed Ollama models" 0 0 "/path/to/directory"
+		PromptUser dir "Please enter the storage directory for installed Ollama models" 0 0 "/path/to/directory"
 		ollamaModelsDirectory=$promptResult
 	fi
 
 	InstallDependencies
 
-	# Debug Countdown
-	Countdown 5
-	
 	if id "$defaultUser" &>/dev/null; then
 		userdel $defaultUser
 		groupdel $defaultUser
@@ -98,15 +98,13 @@ Setup()
 	useradd -rd $defaultDir $defaultUser
 	mkdir $defaultDir/config $defaultDir/log
 	
-	# Debug Countdown
-	Countdown 10
-	
 	SetVar configFile $configFile "$configFile" str
 	SetVar defaultUser $defaultUser "$configFile" str
 	SetVar defaultDir $defaultDir "$configFile" str
 	SetVar logFile $logFile "$configFile" str
 	SetVar httpPort $httpPort "$configFile" str
 	SetVar ggufDirectory $ggufDirectory "$configFile" str
+	SetVar backupDirectory $backupDirectory "$configFile" str
 	SetVar modelFiles $defaultDir/config/modelfiles "$configFile" str
 	SetVar ollamaModelsDirectory $ollamaModelsDirectory "$configFile" str
 	
@@ -138,14 +136,12 @@ Setup()
 
 	if [ -d /usr/lib/systemd/system ]; then
 		serviceLocation="/usr/lib/systemd/system"
-		SetVar serviceLocation $serviceLocation "$configFile" str
-		cp -f $DIRECTORY/configs/*.service $serviceLocation/
 	else
 		serviceLocation="/etc/systemd/system"
-		SetVar serviceLocation $serviceLocation "$configFile" str
 	fi
 
-	cp -f $DIRECTORY/configs/*.service $serviceLocation/
+	cp -f $DIRECTORY/configs/open-webui.service $serviceLocation/
+	SetVar serviceLocation $serviceLocation "$configFile" str
 	SetVar User $defaultUser $serviceLocation/open-webui.service str
 
 	cd $defaultDir

@@ -8,14 +8,12 @@ Backup() {
 	source $configFile
 	_date=$(date +%m-%d-%Y-%H:%M)
 	_fileName="llaman-backup-$_date.tar"
-	
-	PromptUser dir "Enter a directory to output the .tar archive" 0 0 "/path/to/directory"
-	_backupDirectory=$promptResult
-	_tarPath=$_backupDirectory/$_fileName
+	_tarPath=$backupDirectory/$_fileName
 	
 	if [[ ! -d /opt/open-webui/backup ]]; then
 		mkdir /opt/open-webui/backup
 	fi
+	
 	cp -rf $defaultDir/open-webui/backend/data $defaultDir/backup/
 	cp -rf $defaultDir/config $defaultDir/backup/
 	cp -rf $defaultDir/log $defaultDir/backup/
@@ -36,8 +34,9 @@ Import() {
 	HasSudo
 	source $configFile
 	
-	PromptUser file "Enter a path to llaman-backup.tar" 0 0 "/path/to/llaman-backup.tar"
-	importTar=$promptResult
+	importTarDir=$backupDirectory
+	PresentList "$importTarDir" "Please enter the number corresponding to the .tar you want to select." ".tar"
+	importTar=$importTarDir/$presentListResult
 	
 	llaman -S
 	tar xf $importTar -C /
@@ -55,35 +54,24 @@ Import() {
 InstallModel () {
 	HasSudo
 	source $configFile
-	selectedModelFile=""
-	echo "Listing files in the current directory"
-	ggufNum=0
-	modelFileNum=0
-	
-	for fileName in $ggufDirectory/*.gguf; do
-		let ggufNum++
-		fileName=$(echo "$fileName" | rev | cut -d / -f 1 | rev)
-		echo "$ggufNum. $fileName"
-	done
-	
-	PromptUser num "Please enter the number corresponding to the file you want to select" 1 $ggufNum "1-$ggufNum"
-	fileNumber=$promptResult
+	selectedModelFile="$defaultDir/config/modelfiles/DEFAULT"
 
-	for fileName in $defaultDir/config/modelfiles/*; do
-		let modelFileNum++
-		fileName=$(echo "$fileName" | rev | cut -d / -f 1 | rev)
-		echo "$modelFileNum. $fileName"
-	done
+	PresentList "$ggufDirectory" "> Please enter the number corresponding to the .gguf you want to select." ".gguf"
+	selectedFile="$ggufDirectory/$presentListResult"
 
-	PromptUser num "Please enter the number corresponding to the model file you want to select" 1 $ggufNum "1-$ggufNum"
-	modelFile=$promptResult
-	
-	selectedFile=$(ls $ggufDirectory/*.gguf | head -n $fileNumber | tail -n 1)
-	selectedModelFile=$(ls $defaultDir/config/modelfiles/* | head -n $modelFile | tail -n 1)
-	nameOfLLM=$(echo "$selectedFile" | rev | cut -d / -f 1 | rev | sed -e "s|.gguf||g")
+	if PromptUser Yn "> Go with the DEFAULT modelfile?" 0 0 "Y/n"; then
+		echo "> Using DEFAULT modelfile"
+	else
+		PresentList "$defaultDir/config/modelfiles" "Please enter the number corresponding to the modelfile you want to select."
+		selectedModelFile="$defaultDir/config/modelfiles/$presentListResult"
+	fi
+
+	nameOfLLM=$(echo "$selectedFile" | rev | cut -d / -f 1 | rev | sed -r "s|.gguf||g")
 	echo "Selected file: $selectedFile"
 	echo "Name of LLM: $nameOfLLM"
+
 	sed -i "s|FROM /.*|FROM $selectedFile|g" $selectedModelFile
+
 	ollama create $nameOfLLM -f $selectedModelFile
 }
 
@@ -235,8 +223,8 @@ Help () {
 	echo "-S = Stop Ollama and Open-WebUI"
 	echo "-r = Restart Ollama and Open-WebUI"
 	echo "-I = Install a downloaded .gguf model"
-	echo "-r = remove model from Ollama"
-	echo "-d = download .gguf file from https://huggingface.co"
+	echo "-R = remove model from Ollama"
+	echo "-D = download .gguf file from https://huggingface.co"
 	echo "-u = update Ollama and Open-Webui"
 	echo "-v = get LLaMan, Ollama, and Open-Webui version"
 	echo "-h = display this help menu"
@@ -265,7 +253,7 @@ if [ -n "$1" ]; then
          -t) systemctl status ollama
          	systemctl status open-webui ;;
          -I) InstallModel ;;
-         -r) RemoveModel ;;
+         -R) RemoveModel ;;
          -D) DownloadModel ;;
          -u) Update ;;
          -v) GetVersions ;;
