@@ -32,7 +32,7 @@ cd ~/
 * **Remove** - Remove a model from Ollama
 * **Install** - Install a downloaded .gguf model.
 * **Backup** - Input a directroy to output a backup archive.
-* **Backup Utility - Start the Backup Utility to set up automatic backups
+* **Backup Utility** - Start the Backup Utility to set up automatic backups
 * **Import** - Import a .tar file to pick up where you left off on another system.
 * **Get Version** - Get the current installed version of LLaMan, Ollama, and Open-WebUI.
 * **View Logs** - Select from a list of logs to view.
