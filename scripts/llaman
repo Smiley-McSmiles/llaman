@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.3
+llamanVersion=0.1.4
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -259,6 +259,7 @@ InstallModel () {
 
 RemoveModel () {
 	HasSudo
+	source $configFile
 	echo "Installed LLMs:"
 	installedLLMs=$(ollama list | grep -o ".*:latest" | cat -n)
 	num=$(echo "$installedLLMs" | wc -l)
@@ -340,16 +341,6 @@ Update() {
 	installedWebUIVersion=$(GetWebUIVersion)
 	latestWebUIVersion=$(GetLatestWebUIVersion)
 	
-	if [[ ! "$installedLlamanVersion" == "$latestLlamanVersion" ]]; then
-		git clone https://github.com/Smiley-McSmiles/llaman
-		cd llaman
-		chmod ug+x setup.sh
-		sudo ./setup.sh -U
-		cd ~/
-	else
-		echo "> The latest LLaMan version $latestLlamanVersion is already installed."
-	fi
-	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
 		Log "UPDATE | Updated Ollama to v$latestOllamaVersion" $logFile
@@ -362,6 +353,16 @@ Update() {
 		Log "UPDATE | Updated Open-WebUI to v$latestWebUIVersion" $logFile
 	else
 		echo "> The latest Open Web-UI version $latestWebUIVersion is already installed."
+	fi
+	
+	if [[ ! "$installedLlamanVersion" == "$latestLlamanVersion" ]]; then
+		git clone https://github.com/Smiley-McSmiles/llaman
+		cd llaman
+		chmod ug+x setup.sh
+		sudo ./setup.sh -U
+		cd ~/
+	else
+		echo "> The latest LLaMan version $latestLlamanVersion is already installed."
 	fi
 }
 
