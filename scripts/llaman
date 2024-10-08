@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.4
+llamanVersion=0.1.5
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -30,7 +30,10 @@ Example: sudo llaman -e
 "
 
 Backup() {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	_date=$(date +%m-%d-%Y-%H:%M)
 	_fileName="llaman-backup-$_date.tar"
@@ -60,7 +63,10 @@ Backup() {
 }
 
 BackupAuto(){
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	
 	Backup
@@ -86,7 +92,10 @@ BackupAuto(){
 
 BackupUtility()
 {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	while true; do
 		clear
 		optionNumber=
@@ -210,7 +219,10 @@ BackupUtility()
 }
 
 Import() {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	
 	importTarDir=$backupDirectory
@@ -233,7 +245,10 @@ Import() {
 }
 
 InstallModel () {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	selectedModelFile="$defaultDir/config/modelfiles/DEFAULT"
 
@@ -258,7 +273,10 @@ InstallModel () {
 }
 
 RemoveModel () {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	echo "Installed LLMs:"
 	installedLLMs=$(ollama list | grep -o ".*:latest" | cat -n)
@@ -279,7 +297,10 @@ RemoveModel () {
 }
 
 DownloadModel () {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	echo "> Please past the URL to the .gguf file from https://huggingface.co"
 	read -p ">>> URL : " 'URL'
@@ -302,7 +323,10 @@ DownloadModel () {
 }
 
 UpdateWeb() {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 
 	cd $defaultDir
@@ -332,7 +356,10 @@ UpdateWeb() {
 }
 
 Update() {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	installedLlamanVersion="$llamanVersion"
 	latestLlamanVersion=$(GetLatestLlamanVersion)
@@ -367,7 +394,10 @@ Update() {
 }
 
 GetVersions() {
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	installedOllamaVersion=$(GetOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
 	echo "LLaMan v$llamanVersion"
@@ -380,7 +410,7 @@ GetLatestLlamanVersion() {
 }
 
 GetLatestOllamaVersion() {
-	echo $(curl -fsSL https://github.com/ollama/ollama/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9]\.[0-9]")
+	echo $(curl -fsSL https://github.com/ollama/ollama/releases/latest | grep '<title>' | cut -d " " -f 4 | sed -r "s/v//g")
 }
 
 GetOllamaVersion() {
@@ -397,7 +427,10 @@ GetWebUIVersion() {
 }
 
 Control(){
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	
 	case "$1" in
@@ -420,7 +453,10 @@ Control(){
 }
 
 Uninstall(){
-	HasSudo
+	if ! HasSudo; then
+		exit
+	fi
+
 	source $configFile
 	echo "Uninstalling LLaMan, Ollama, and Open-Webui"
 	echo "You have 10 seconds to cancel with CTRL + C..."
@@ -469,7 +505,10 @@ if [ -n "$1" ]; then
          -D | --download) DownloadModel ;;
          -u | --update) Update ;;
          -v | --version) GetVersions ;;
-         -vl | --view-logs) HasSudo
+         -vl | --view-logs) if ! HasSudo; then
+		exit
+	fi
+
          		source $configFile
          		ViewLog "$defaultDir/log" ;;
          -X | --uninstall) Uninstall ;;
