@@ -541,7 +541,7 @@ if [ -n "$1" ]; then
          	systemctl status open-webui ;;
          -I | --install) InstallModel ;;
          -R | --remove) RemoveModel ;;
-         -rm | --remove-gguf) RemoveGGUF ;;
+         -rg | --remove-gguf) RemoveGGUF ;;
          -D | --download) DownloadModel ;;
          -u | --update) Update ;;
          -v | --version) GetVersions ;;
