@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.5
+llamanVersion=0.1.6
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -20,6 +20,7 @@ PARAMETERS:
 -t,    --status           Get status of ollama.service and open-webui.service.
 -I,    --install          Install a downloaded .gguf model
 -R,    --remove           Remove model from Ollama
+-rg,   --remove-gguf      Remove downloaded .gguf model
 -D,    --download         Download .gguf file from https://huggingface.co
 -u,    --update           Update Ollama and Open-Webui
 -v,    --version          Get LLaMan, Ollama, and Open-Webui version
@@ -29,7 +30,8 @@ PARAMETERS:
 Example: sudo llaman -e
 "
 
-Backup() {
+Backup()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -62,7 +64,8 @@ Backup() {
 	Log "BACKUP | Created backup $_tarPath" $logFile
 }
 
-BackupAuto(){
+BackupAuto()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -244,7 +247,8 @@ Import() {
 	Log "IMPORT | Imported $importTar" $logFile
 }
 
-InstallModel () {
+InstallModel()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -272,7 +276,28 @@ InstallModel () {
 	Log "INSTALL-MODEL | Installed model $nameOfLLM" $logFile
 }
 
-RemoveModel () {
+RemoveGGUF()
+{
+	if ! HasSudo; then
+		exit
+	fi
+
+	source $configFile
+	PresentList "$ggufDirectory" "> Please enter the number corresponding to the .gguf you want to delete." ".gguf"
+	selectedFile="$ggufDirectory/$presentListResult"
+	
+	nameOfLLM=$(echo "$selectedFile" | rev | cut -d / -f 1 | rev | sed -r "s|.gguf||g")
+	echo "Selected file: $selectedFile"
+	echo "Name of LLM: $nameOfLLM"
+	if PromptUser yN "> Are you sure you want to delete $nameOfLLM from your system?" 0 0 "y/N"; then
+		rm -fv $selectedFile
+	else
+		echo "> Keeping $nameOfLLM..."
+	fi
+}
+
+RemoveModel()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -287,7 +312,7 @@ RemoveModel () {
 	read -p "Please enter the number corresponding to the LLM you want to remove: " LLMNumber
 
 	if [ $LLMNumber -gt $num ] || [ $LLMNumber -lt 1 ] ; then
-		echo "Invalid selection. Please choose a number within the range of available LLMs."
+		echo "> Invalid selection. Please choose a number within the range of available LLMs."
 	else
 		selectedFile=$(ollama list | grep -o ".*:latest" | head -n $LLMNumber | tail -n 1)
 		echo "Selected LLM: $selectedFile"
@@ -296,7 +321,8 @@ RemoveModel () {
 	fi
 }
 
-DownloadModel () {
+DownloadModel()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -322,7 +348,8 @@ DownloadModel () {
 	fi
 }
 
-UpdateWeb() {
+UpdateWeb()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -351,11 +378,13 @@ UpdateWeb() {
 	cp -rfv ../../open-webui-backup/backend/data ./
 
 	sed -ri "s|exec uvicorn|python -m uvicorn|g" start.sh
+	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" start.sh
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
 }
 
-Update() {
+Update()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -394,7 +423,8 @@ Update() {
 	fi
 }
 
-GetVersions() {
+GetVersions()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -406,28 +436,34 @@ GetVersions() {
 	echo "Open-WebUI v$installedWebUIVersion"
 }
 
-GetLatestLlamanVersion() {
+GetLatestLlamanVersion()
+{
 	echo $(curl -fsSL https://raw.githubusercontent.com/Smiley-McSmiles/llaman/main/README.md | head -n 1 | cut -d " " -f 3 | sed -r "s|v||g")
 }
 
-GetLatestOllamaVersion() {
+GetLatestOllamaVersion()
+{
 	echo $(curl -fsSL https://github.com/ollama/ollama/releases/latest | grep '<title>' | cut -d " " -f 4 | sed -r "s/v//g")
 }
 
-GetOllamaVersion() {
+GetOllamaVersion()
+{
 	echo $(ollama --version | rev | cut -d " " -f 1 | rev)
 }
 
-GetLatestWebUIVersion(){
+GetLatestWebUIVersion()
+{
 	echo $(curl -fsSL https://github.com/open-webui/open-webui/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9]\.[0-9][0-9]")
 }
 
-GetWebUIVersion() {
+GetWebUIVersion()
+{
 	source $configFile
 	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "[0-9].[0-9]\.[0-9][0-9]")
 }
 
-Control(){
+Control()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -453,7 +489,8 @@ Control(){
 	esac
 }
 
-Uninstall(){
+Uninstall()
+{
 	if ! HasSudo; then
 		exit
 	fi
@@ -480,7 +517,8 @@ Uninstall(){
 	rm -r /usr/bin/llaman 
 }
 
-Help () {
+Help ()
+{
 echo "$help"
 }
 
@@ -503,6 +541,7 @@ if [ -n "$1" ]; then
          	systemctl status open-webui ;;
          -I | --install) InstallModel ;;
          -R | --remove) RemoveModel ;;
+         -rm | --remove-gguf) RemoveGGUF ;;
          -D | --download) DownloadModel ;;
          -u | --update) Update ;;
          -v | --version) GetVersions ;;

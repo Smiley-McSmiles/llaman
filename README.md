@@ -1,4 +1,4 @@
-> LLaMan v0.1.5 - An Ollama and Open-WebUI manager written in BASH
+> LLaMan v0.1.6 - An Ollama and Open-WebUI manager written in BASH
 
 > Tested on Fedora 40
 
@@ -30,12 +30,13 @@ cd ~/
 * **Status** - Get status of ollama.service and open-webui.service
 * **Download** - Download a .gguf file from Hugging Face via URL
 * **Remove** - Remove a model from Ollama
-* **Install** - Install a downloaded .gguf model.
-* **Backup** - Input a directroy to output a backup archive.
+* **Remove GGUF** - Remove a downloaded .gguf model
+* **Install** - Install a downloaded .gguf model
+* **Backup** - Input a directroy to output a backup archive
 * **Backup Utility** - Start the Backup Utility to set up automatic backups
-* **Import** - Import a .tar file to pick up where you left off on another system.
-* **Get Version** - Get the current installed version of LLaMan, Ollama, and Open-WebUI.
-* **View Logs** - Select from a list of logs to view.
+* **Import** - Import a .tar file to pick up where you left off on another system
+* **Get Version** - Get the current installed version of LLaMan, Ollama, and Open-WebUI
+* **View Logs** - Select from a list of logs to view
 * **Uninstall** - Uninstalls LLaMan, Ollama, and Open-WebUI completely
 
 # Usage
@@ -54,6 +55,7 @@ PARAMETERS:
 -t,    --status           Get status of ollama.service and open-webui.service.
 -I,    --install          Install a downloaded .gguf model
 -R,    --remove           Remove model from Ollama
+-rg,   --remove-gguf      Remove downloaded .gguf model
 -D,    --download         Download .gguf file from https://huggingface.co
 -u,    --update           Update Ollama and Open-Webui
 -v,    --version          Get LLaMan, Ollama, and Open-Webui version
