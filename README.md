@@ -32,6 +32,7 @@ cd ~/
 * **Remove** - Remove a model from Ollama
 * **Remove GGUF** - Remove a downloaded .gguf model
 * **Install** - Install a downloaded .gguf model
+* **Change Port** - Change the default port for Open-WebUI
 * **Backup** - Input a directroy to output a backup archive
 * **Backup Utility** - Start the Backup Utility to set up automatic backups
 * **Import** - Import a .tar file to pick up where you left off on another system
@@ -58,6 +59,7 @@ PARAMETERS:
 -rg,   --remove-gguf      Remove downloaded .gguf model
 -D,    --download         Download .gguf file from https://huggingface.co
 -u,    --update           Update Ollama and Open-Webui
+-cp,    --change-port      Change the Open-WebUI port
 -v,    --version          Get LLaMan, Ollama, and Open-Webui version
 -vl,   --view-logs        View LLaMan logs
 -h,    --help             Display this help menu
