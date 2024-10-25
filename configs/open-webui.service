@@ -3,8 +3,8 @@ Description=Open-WebUI
 After=network.target
 
 [Service]
-WorkingDirectory=/opt/open-webui/open-webui/backend/
-ExecStart=/opt/open-webui/open-webui/backend/start.sh
+WorkingDirectory=/opt/open-webui/
+ExecStart=/opt/open-webui/start.sh
 RestartForceExitStatus=3
 User=open-webui
 

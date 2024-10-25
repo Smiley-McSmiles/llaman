@@ -1,5 +1,16 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.1.7
+## Additions
+- Added function `llaman -cp/--change-port`
+
+## Changes
+- updated llaman-functions with better `SetVar` function.
+- LLaMan now uses Conda with Python 3.11 for stability
+
+## Fixes
+- Fixed `jellyman` to `LLaMan` in the man page
+
 # LLaMan v0.1.6
 ## Additions
 - Added a running log of Open-WebUI to `/opt/open-webui/log/open-webui.log` (This will apply on next Open-WebUI version update)

@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.6
+llamanVersion=0.1.7
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -23,6 +23,7 @@ PARAMETERS:
 -rg,   --remove-gguf      Remove downloaded .gguf model
 -D,    --download         Download .gguf file from https://huggingface.co
 -u,    --update           Update Ollama and Open-Webui
+-cp    --change-port      Change the Open-WebUI port
 -v,    --version          Get LLaMan, Ollama, and Open-Webui version
 -vl,   --view-logs        View LLaMan logs
 -h,    --help             Display this help menu
@@ -111,10 +112,10 @@ BackupUtility()
 			PromptUser num "> Please enter your desired maximum number of backup archives" 1 20 "1-20"
 			maxBackupNumber=$promptResult
 			systemctl enable --now llaman-backup.timer
-			SetVar backupDirectory "$backupDirectory" "$configFile" str
-			SetVar maxBackupNumber $maxBackupNumber "$configFile" str
-			SetVar autoBackups true "$configFile" str
-			SetVar backupFrequency "weekly" "$configFile" str
+			SetVar backupDirectory "$backupDirectory" "$configFile" bash directory
+			SetVar maxBackupNumber $maxBackupNumber "$configFile" bash int
+			SetVar autoBackups true "$configFile" bash bool
+			SetVar backupFrequency "weekly" "$configFile" bash string
 			Log "BACKUP-UTILITY | Setup Backup Utility at $backupDirectory max of $maxBackupNumber done weekly" $logFile
 		fi
 		
@@ -143,13 +144,13 @@ BackupUtility()
 			"1")
 				# enable auto-backups
 				systemctl enable --now llaman-backup.timer
-				SetVar autoBackups true "$configFile" str
+				SetVar autoBackups true "$configFile" bash bool
 				Log "BACKUP-UTILITY | Automatic backups enabled" $logFile
 				;;
 			"2")
 				# disable auto-backups
 				systemctl disable --now llaman-backup.timer
-				SetVar autoBackups false "$configFile" str
+				SetVar autoBackups false "$configFile" bash bool
 				Log "BACKUP-UTILITY | Automatic backups disabled" $logFile
 				;;
 			"3")
@@ -159,7 +160,7 @@ BackupUtility()
 				fi
 				PromptUser dir "> Please enter your desired directory for backup archives"
 				backupDirectory="$promptResult"
-				SetVar "backupDirectory" "$backupDirectory" "$configFile"
+				SetVar "backupDirectory" "$backupDirectory" "$configFile" bash directory
 				Log "BACKUP-UTILITY | Automatic backup location changed to $backupDirectory" $logFile
 				;;
 			"4")
@@ -169,7 +170,7 @@ BackupUtility()
 				fi
 				PromptUser num "> Please enter your desired maximum number of backup archives" 1 50 "1-50"
 				maxBackupNumber=$promptResult
-				SetVar maxBackupNumber "$maxBackupNumber" "$configFile"
+				SetVar maxBackupNumber "$maxBackupNumber" "$configFile" bash int
 				Log "BACKUP-UTILITY | Max automatic backups changed to $maxBackupNumber " $logFile
 				;;
 			"5")
@@ -186,21 +187,21 @@ BackupUtility()
 				llamanBackupTimer=$serviceDirectory/llaman-backup.timer
 				case $_optionNumber in
 					"1")
-						SetVar backupFrequency "daily" "$configFile"
+						SetVar backupFrequency "daily" "$configFile" bash string
 						sed -i "s|OnCalendar.*|OnCalendar=*-*-* 01:00:00|g" $llamanBackupTimer
 						echo "> Backups will now be created every day at 1:00 AM"
 						read -p "> Press ENTER to exit" ENTER
 						Log "BACKUP-UTILITY | Frequency of automatic backups changed to daily" $logFile
 						;;
 					"2")
-						SetVar backupFrequency "weekly" "$configFile"
+						SetVar backupFrequency "weekly" "$configFile" bash string
 						sed -i "s|OnCalendar.*|OnCalendar=Sun *-*-* 01:00:00|g" $llamanBackupTimer
 						echo "> Backups will now be created every Sunday at 1:00 AM"
 						read -p "> Press ENTER to exit" ENTER
 						Log "BACKUP-UTILITY | Frequency of automatic backups changed to weekly" $logFile
 						;;
 					"3")
-						SetVar backupFrequency "monthly" "$configFile"
+						SetVar backupFrequency "monthly" "$configFile" bash string
 						sed -i "s|OnCalendar.*|OnCalendar=*-*-01 01:00:00|g" $llamanBackupTimer
 						echo "> Backups will now be created on the 1st of every month at 1:00 AM"
 						read -p "> Press ENTER to exit" ENTER
@@ -348,6 +349,18 @@ DownloadModel()
 	fi
 }
 
+ChangePort()
+{
+	SetVar httpPort $httpPort "$configFile" bash int
+	PromptUser num "Enter a valid port" 1001 9999 "$minNumber-$maxNumber"
+	httpPort=$promptResult
+	echo "> Changing Open-WebUI port to $httpPort"
+
+	sed -ri "s|-8080|-$httpPort|g" $defaultDir/open-webui/backend/start.sh
+	Log "SETUP | SetVar httpPort=$httpPort" $logFile
+	Control restart
+}
+
 UpdateWeb()
 {
 	if ! HasSudo; then
@@ -372,7 +385,6 @@ UpdateWeb()
 	npm run build
 
 	cd backend/
-	pip install -r requirements.txt -U
 	
 	# Move data from previous install
 	cp -rfv ../../open-webui-backup/backend/data ./
@@ -381,6 +393,9 @@ UpdateWeb()
 	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" start.sh
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
+	sudo -u $defaultUser bash -c "$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
+	Control restart
+	
 }
 
 Update()
@@ -471,20 +486,15 @@ Control()
 	source $configFile
 	
 	case "$1" in
-		start) systemctl start ollama
-         	systemctl start open-webui
+		start) systemctl start ollama open-webui
          	Log "LLAMAN | Started Ollama and Open-webui" $logFile ;;
-		stop) systemctl stop ollama
-         	systemctl stop open-webui
+		stop) systemctl stop ollama open-webui
          	Log "LLAMAN | Stopped Ollama and Open-webui" $logFile ;;
-		enable) systemctl enable ollama
-         	systemctl enable open-webui
+		enable) systemctl enable ollama open-webui
          	Log "LLAMAN | Enabled Ollama and Open-webui" $logFile ;;
-		disable) systemctl disable ollama
-         	systemctl disable open-webui
+		disable) systemctl disable ollama open-webui
          	Log "LLAMAN | Disabled Ollama and Open-webui" $logFile ;;
-		restart) systemctl restart ollama
-         	systemctl restart open-webui
+		restart) systemctl restart ollama open-webui
          	Log "LLAMAN | Restarted Ollama and Open-webui" $logFile ;;
 	esac
 }
@@ -496,25 +506,24 @@ Uninstall()
 	fi
 
 	source $configFile
-	echo "Uninstalling LLaMan, Ollama, and Open-Webui"
-	echo "You have 10 seconds to cancel with CTRL + C..."
-	Countdown 10
-	echo "TOO LATE!"
-	
-	llaman -d -S
-	userdel $defaultUser
-	userdel ollama
-	sleep 3
-	groupdel $defaultUser
-	groupdel ollama
-	sleep 2
-	rm -f $serviceLocation/open-webui.service
-	rm -f $serviceLocation/ollama.service
-	rm -r /usr/local/bin/ollama
-	rm -rf $defaultDir
-	rm -rf $ollamaModelsDirectory
-	rm -r /usr/share/ollama
-	rm -r /usr/bin/llaman 
+	if PromptUser yN "Are you sure you want to fully uninstall LLaman/Ollama/Open-webui?" 0 0 "y/N"; then
+		llaman -d -S
+		userdel $defaultUser
+		userdel ollama
+		sleep 3
+		groupdel $defaultUser
+		groupdel ollama
+		sleep 2
+		rm -f $serviceLocation/open-webui.service
+		rm -f $serviceLocation/ollama.service
+		rm -r /usr/local/bin/ollama
+		rm -rf $defaultDir
+		rm -rf $ollamaModelsDirectory
+		rm -r /usr/share/ollama
+		rm -r /usr/bin/llaman 
+	 else
+		exit
+	fi
 }
 
 Help ()
@@ -544,6 +553,7 @@ if [ -n "$1" ]; then
          -rg | --remove-gguf) RemoveGGUF ;;
          -D | --download) DownloadModel ;;
          -u | --update) Update ;;
+         -cp | --change-port) ChangePort ;;
          -v | --version) GetVersions ;;
          -vl | --view-logs) if ! HasSudo; then
 		exit
