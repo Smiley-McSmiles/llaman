@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
-llamanVersion=0.1.7
+llamanVersion=0.1.8
 httpPort=8080
 defaultUser=open-webui
 defaultDir=/opt/open-webui
@@ -16,11 +16,7 @@ Update(){
 
 	# Conda
 	if [[ ! -d $defaultDir/config/conda/open-webui ]]; then
-		InstallDependencies
-		mkdir -p $defaultDir/config/conda
-		conda create --prefix $defaultDir/config/conda/open-webui python=3.11 -y
-		chown -Rf $defaultUser:$defaultUser $defaultDir/config/conda
-		sudo -u $defaultUser bash -c "$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
+		SetupConda
 	fi
 
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
@@ -63,10 +59,10 @@ Update(){
 
 InstallDependencies()
 {
-	packagesNeededRHEL="npm python3-devel make automake gcc gcc-c++ kernel-devel conda curl screen"
-	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) conda curl screen"
-	packagesNeededArch="npm python-devtools make automake gcc linux-headers conda curl screen"
-	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel conda curl screen"
+	packagesNeededRHEL="npm python3-devel make automake gcc gcc-c++ kernel-devel curl screen"
+	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) curl screen"
+	packagesNeededArch="npm python-devtools make automake gcc linux-headers curl screen"
+	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel curl screen"
 	echo "> Preparing to install needed dependancies for LLaman and Open-WebUI..."
 
 	if [[ -f /etc/os-release ]]; then
@@ -115,6 +111,20 @@ InstallDependencies()
 		
 		read -p "Press ENTER to continue" ENTER
 	fi
+}
+
+SetupConda(){
+	pyVersion="3.11"
+	sudo -u $defaultUser bash -c "\
+		mkdir -p $defaultDir/miniconda3 $defaultDir/config/conda;\
+		wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $defaultDir/miniconda3/miniconda.sh;\
+		chmod +x $defaultDir/miniconda3/miniconda.sh;\
+		bash $defaultDir/miniconda3/miniconda.sh -b -u -p $defaultDir/miniconda3;\
+		rm $defaultDir/miniconda3/miniconda.sh;\
+		source $defaultDir/miniconda3/bin/activate;\
+		conda init --all;\
+		$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y;\
+		$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
 }
 
 Setup(){
@@ -256,10 +266,7 @@ Setup(){
 
 	chmod -Rf 770 $defaultDir
 
-	mkdir -p $defaultDir/config/conda
-	conda create --prefix $defaultDir/config/conda/open-webui python=3.11 -y
-	chown -Rf $defaultUser:$defaultUser $defaultDir/config/conda
-	sudo -u $defaultUser bash -c "$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
+	SetupConda
 	
 	systemctl enable --now ollama open-webui llaman-backup.timer
 	

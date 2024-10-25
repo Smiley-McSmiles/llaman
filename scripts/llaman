@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.7
+llamanVersion=0.1.8
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -49,7 +49,9 @@ Backup()
 	cp -rf $defaultDir/open-webui/backend/data $defaultDir/backup/
 	cp -rf $defaultDir/config $defaultDir/backup/
 	cp -rf $defaultDir/log $defaultDir/backup/
+	cp -rf $defaultDir/miniconda3 $defaultDir/backup/
 	cp -rf $serviceDirectory/llaman-backup.timer $defaultDir/backup/
+	cp -f $defaultDir/start.sh $defaultDir/backup/
 	time tar cf "$_tarPath" /opt/open-webui/backup
 	
 	rm -rf $defaultDir/backup
@@ -238,6 +240,8 @@ Import() {
 	cp -rf $defaultDir/backup/data $defaultDir/open-webui/backend/ 
 	cp -rf $defaultDir/backup/config $defaultDir/
 	cp -rf $defaultDir/backup/log $defaultDir/
+	cp -rf $defaultDir/backup/miniconda3 $defaultDir/
+	cp -rf $defaultDir/backup/start.sh $defaultDir/
 	cp -rf $defaultDir/backup/llaman-backup.timer $serviceDirectory/
 	
 	rm -rf /$defaultDir/backup
@@ -393,7 +397,8 @@ UpdateWeb()
 	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" start.sh
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
-	sudo -u $defaultUser bash -c "$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
+	sudo -u $defaultUser bash -c "\
+	$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
 	Control restart
 	
 }

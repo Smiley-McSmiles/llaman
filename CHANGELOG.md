@@ -1,5 +1,12 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.1.8
+## Changes
+- Changed Conda install to miniconda3 via wget instead of the package manager.
+
+## Additions
+- `sudo llaman -ba` now properly backs up miniconda3 and the new start.sh
+
 # LLaMan v0.1.7
 ## Additions
 - Added function `llaman -cp/--change-port`
