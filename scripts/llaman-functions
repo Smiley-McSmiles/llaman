@@ -180,40 +180,114 @@ RoundNumber()
 	echo "$_numberRounded"
 }
 
-SetVar()
-{
-	# SetVar testVar "newVarContent" "fileToChange" varType
+SetVar() {
+	# SetVar testVar "newVarContent" "fileToChange" varType dataType
 	varToChange=$1
 	newVarContent=$2
 	fileToChange=$3
-	varType=$4
+	varType="$4"
+	dataType=$5
 
-	if [[ ! -f "$fileToChange" ]]; then
-		touch "$fileToChange"
-		echo "$varToChange=$newVarContent" >> $fileToChange
-	elif ( ! grep -q $varToChange "$fileToChange" ); then
-		echo "$varToChange=$newVarContent" >> $fileToChange
-	else
-		if [[ ! -n $varToChange ]] || [[ ! -n $newVarContent ]]; then
-			echo "Function SetVar requires 3 parameters: varToChange newVarContent fileToChange"
-			return 1
-			exit
-		elif [[ $varType == "array" ]]; then
-			sed -i "s|$varToChange=.*|$varToChange=\($newVarContent\)|g" $fileToChange
-			return 0
-		elif [[ $varType == "str" ]]; then
-			sed -i "s|$varToChange=.*|$varToChange=\'$newVarContent\'|g" $fileToChange
-			return 0
-		else
-			sed -i "s|$varToChange=.*|$varToChange=$newVarContent|g" $fileToChange
-			return 0
-		fi
+	if [[ ! -n $varToChange ]] || [[ ! -n $newVarContent ]]; then
+		echo "ERROR: Function SetVar requires at least 4 parameters: varToChange newVarContent fileToChange varType"
+		return 1
 	fi
+
+	case $varType in
+		bash)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "$varToChange=$newVarContent" > $fileToChange
+			elif ( ! grep -q $varToChange "$fileToChange" ); then
+				echo "$varToChange=$newVarContent" >> $fileToChange
+			else
+				case $dataType in
+					array)
+						sed -i "s|$varToChange=.*|$varToChange=\($newVarContent\)|g" $fileToChange
+					;;
+					string)
+						sed -i "s|$varToChange=.*|$varToChange=\"$newVarContent\"|g" $fileToChange
+					;;
+					*)
+						sed -i "s|$varToChange=.*|$varToChange=$newVarContent|g" $fileToChange
+					;;
+				esac
+			fi
+		;;
+		ini)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "$varToChange = $newVarContent" > $fileToChange
+			elif ( ! grep -q "$varToChange " "$fileToChange" ); then
+				echo "$varToChange = $newVarContent" >> $fileToChange
+			else
+				sed -i "s|$varToChange .*|$varToChange = $newVarContent|g" $fileToChange
+			fi
+		;;
+		json)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "ERROR: json file does not exist!"
+			elif grep -q "\"$varToChange\":" "$fileToChange"; then
+				case $dataType in
+					string)
+						sed -i "s|\"$varToChange.*\"|\"$varToChange\": \"$newVarContent\"|g" $fileToChange
+					;;
+					number)
+						sed -i "s|\"$varToChange\": .*[0-9]|\"$varToChange\": $newVarContent|g" $fileToChange
+					;;
+					*)
+						echo "ERROR: Unknown json dataType $dataType!"
+						echo "    Allowed json data types: \"string\" \"number\""
+					;;
+				esac
+			else
+				echo "ERROR: Variable $varToChange does not exist in $fileToChange"
+			fi
+		;;
+		yaml)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "$varToChange: $newVarContent" > $fileToChange
+			elif grep -q "^$varToChange:" "$fileToChange"; then
+				sed -i "s|^$varToChange: .*$|$varToChange: $newVarContent|g" $fileToChange
+			else
+				echo "" >> $fileToChange
+				echo "$varToChange: $newVarContent" >> $fileToChange
+			fi
+		;;
+		xml)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "File $fileToChange does not exist."
+				return 1
+			fi
+
+			if ( grep -q "$varToChange=\".*\"" "$fileToChange" ) && ( grep -q "<$varToChange>.*</$varToChange>" "$fileToChange" ) && [[ ! -n $dataType ]]; then
+				echo "ERROR: multiple xml variable types of the same name in document!"
+				return 1
+			elif ( grep -q "$varToChange=\".*\"" "$fileToChange" ) && [[ $dataType == "attribute" ]]; then
+				# $varToChange="timeout" <application timeout="30">
+				sed -i "s|$(grep -oP "$varToChange=\".*?\"" "$fileToChange")|$varToChange=\"$newVarContent\"|g" $fileToChange
+			elif ( grep -q "<$varToChange>.*</$varToChange>" "$fileToChange" ) && [[ $dataType == "element" ]]; then
+				# $varToChange="port" <port>30</port>
+				sed -i "s|<$varToChange>.*</$varToChange>|<$varToChange>$newVarContent</$varToChange>|g" $fileToChange
+			elif ( grep -q "<$varToChange .*/>" "$fileToChange" ) && [[ $dataType == "self-closing" ]]; then
+				# $varToChange="newport" <newport 30/>
+				sed -i "s|<$varToChange .*/>|<$varToChange $newVarContent/>|g" $fileToChange
+			else
+				echo "ERROR: Unknown XML dataType $dataType!"
+				echo "    Allowed data types: \"attribute\" \"element\" \"self-closing\""
+				return 1
+			fi
+		;;
+		*)
+			echo "ERROR: Unsupported varType: $varType"
+			echo "    Supported variable types: \"bash\" \"ini\" \"json\" \"yaml\" \"xml\""
+			return 1
+		;;
+	esac
 }
 
 DelVar()
 {
 	# DelVar varToDelete fileToChange
+	# Use only with shell, ini, and yaml variables. Be very careful with deleting xml and json variables.
 	varToDelete=$1
 	fileToChange=$2
 	if ( ! grep -q $varToChange "$fileToChange" ); then
@@ -221,22 +295,6 @@ DelVar()
 		return 1
 	else
 		sed -i "/$varToDelete/d" $fileToChange
-		return 0
-	fi
-}
-
-SetXmlVar()
-{
-	# Change_xml_variable testVar "newVarContent" "fileToChange"
-	varToChange=$1
-	newVarContent=$2
-	fileToChange=$3
-	if [[ ! -n $varToChange ]] || [[ ! -n $newVarContent ]] && [[ ! $fileToChange == *".xml" ]]; then
-		echo "Function Change_xml_variable requires 3 parameters: varToChange newVarContent fileToChange"
-		return 1
-		exit
-	else
-		sed -i "s|<$varToChange>.*</$varToChange>|<$varToChange>$newVarContent</$varToChange>|g" $fileToChange
 		return 0
 	fi
 }

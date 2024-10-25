@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
-llamanVersion=0.1.6
+llamanVersion=0.1.7
 httpPort=8080
 defaultUser=open-webui
 defaultDir=/opt/open-webui
@@ -13,19 +13,31 @@ Update(){
 	HasSudo
 	configFile=/opt/open-webui/config/llaman.conf
 	source $configFile
-	
+
+	# Conda
+	if [[ ! -d $defaultDir/config/conda/open-webui ]]; then
+		InstallDependencies
+		mkdir -p $defaultDir/config/conda
+		conda create --prefix $defaultDir/config/conda/open-webui python=3.11 -y
+		chown -Rf $defaultUser:$defaultUser $defaultDir/config/conda
+		sudo -u $defaultUser bash -c "$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
+	fi
+
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
 	cp -f $DIRECTORY/scripts/llaman-functions /usr/bin/
+	cp -f $DIRECTORY/scripts/start.sh $defaultDir/
 	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
 	cp -f $DIRECTORY/configs/modelfiles/* $defaultDir/config/modelfiles/
 	cp -f $DIRECTORY/configs/llaman-backup.service $serviceDirectory/
 	
+	chmod +x $defaultDir/start.sh
+	
 	if [[ ! -f $serviceDirectory/llaman-backup.timer ]]; then
 		cp -f $DIRECTORY/configs/llaman-backup.timer $serviceDirectory/
-		SetVar backupDirectory "$backupDirectory" "$configFile" str
-		SetVar maxBackupNumber 5 "$configFile" str
-		SetVar autoBackups true "$configFile" str
-		SetVar backupFrequency "weekly" "$configFile" str
+		SetVar backupDirectory "$backupDirectory" "$configFile" bash directory
+		SetVar maxBackupNumber 5 "$configFile" bash int
+		SetVar autoBackups true "$configFile" bash bool
+		SetVar backupFrequency "weekly" "$configFile" bash string
 		systemctl enable --now llaman-backup.timer
 		Log "SETUP-UPDATE | SetVar backupDirectory=$backupDirectory" $logFile
 		Log "SETUP-UPDATE | SetVar maxBackupNumber=$maxBackupNumer" $logFile
@@ -46,14 +58,15 @@ Update(){
 	
 	systemctl daemon-reload
 	echo "> Updated LLaMan to v$llamanVersion!"
+	llaman -r
 }
 
 InstallDependencies()
 {
-	packagesNeededRHEL="npm python3-devel make automake gcc gcc-c++ kernel-devel curl screen"
-	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) screen"
-	packagesNeededArch="npm python-devtools make automake gcc linux-headers curl screen"
-	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel curl screen"
+	packagesNeededRHEL="npm python3-devel make automake gcc gcc-c++ kernel-devel conda curl screen"
+	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) conda curl screen"
+	packagesNeededArch="npm python-devtools make automake gcc linux-headers conda curl screen"
+	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel conda curl screen"
 	echo "> Preparing to install needed dependancies for LLaman and Open-WebUI..."
 
 	if [[ -f /etc/os-release ]]; then
@@ -111,6 +124,14 @@ Setup(){
 	serviceDirectory=
 	ollamaModelsDirectory=/usr/share/ollama/.ollama/models
 	
+	if PromptUser yN "Would you like to change the default port from 8080?" 0 0 "y/N"; then
+		PromptUser num "Enter a valid port" 1001 9999 "$minNumber-$maxNumber"
+		httpPort=$promptResult
+		echo "> Changing Open-WebUI port to $httpPort"
+	else
+		echo "> Keeping Open-WebUI on port 8080..."
+	fi
+	
 	PromptUser dir "Please enter the storage directory for .gguf models" 0 0 "/path/to/directory"
 	ggufDirectory=$promptResult
 	
@@ -142,18 +163,18 @@ Setup(){
 	useradd -rd $defaultDir $defaultUser
 	mkdir $defaultDir/config $defaultDir/log
 	
-	SetVar configFile $configFile "$configFile" str
-	SetVar defaultUser $defaultUser "$configFile" str
-	SetVar defaultDir $defaultDir "$configFile" str
-	SetVar logFile $logFile "$configFile" str
-	SetVar httpPort $httpPort "$configFile" str
-	SetVar ggufDirectory $ggufDirectory "$configFile" str
-	SetVar backupDirectory $backupDirectory "$configFile" str
-	SetVar modelFiles $defaultDir/config/modelfiles "$configFile" str
-	SetVar ollamaModelsDirectory $ollamaModelsDirectory "$configFile" str
-	SetVar maxBackupNumber $maxBackupNumber "$configFile" str
-	SetVar autoBackups true "$configFile" str
-	SetVar backupFrequency "weekly" "$configFile" str
+	SetVar configFile $configFile "$configFile" bash string
+	SetVar defaultUser $defaultUser "$configFile" bash user
+	SetVar defaultDir $defaultDir "$configFile" bash directory
+	SetVar logFile $logFile "$configFile" bash directory
+	SetVar httpPort $httpPort "$configFile" bash int
+	SetVar ggufDirectory $ggufDirectory "$configFile" bash directory
+	SetVar backupDirectory $backupDirectory "$configFile" bash directory
+	SetVar modelFiles $defaultDir/config/modelfiles "$configFile" bash directory
+	SetVar ollamaModelsDirectory $ollamaModelsDirectory "$configFile" bash directory
+	SetVar maxBackupNumber $maxBackupNumber "$configFile" bash int
+	SetVar autoBackups true "$configFile" bash bool
+	SetVar backupFrequency "weekly" "$configFile" bash string
 	Log "SETUP | SetVar configFile=$configFile" $logFile
 	Log "SETUP | SetVar defaultUser=$defaultUser" $logFile
 	Log "SETUP | SetVar defaultDir=$defaultDir" $logFile
@@ -197,7 +218,9 @@ Setup(){
 
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
 	cp -f $DIRECTORY/scripts/llaman-functions /usr/bin/
+	cp -f $DIRECTORY/scripts/start.sh $defaultDir/
 	cp -rf $DIRECTORY/configs/modelfiles $defaultDir/config/
+	chmod +x $defaultDir/start.sh
 	chmod +x /usr/bin/llaman
 	chmod +x /usr/bin/llaman-functions
 
@@ -210,12 +233,13 @@ Setup(){
 	cp -f $DIRECTORY/configs/open-webui.service $serviceDirectory/
 	cp -f $DIRECTORY/configs/llaman-backup.service $serviceDirectory/
 	cp -f $DIRECTORY/configs/llaman-backup.timer $serviceDirectory/
-	SetVar serviceDirectory $serviceDirectory "$configFile" str
-	SetVar User $defaultUser $serviceDirectory/open-webui.service str
+	SetVar serviceDirectory $serviceDirectory "$configFile" bash directory
+	SetVar User $defaultUser $serviceDirectory/open-webui.service bash user
 	Log "SETUP | SetVar serviceDirectory=$serviceDirectory" $logFile
 
 	cd $defaultDir
 	git clone https://github.com/open-webui/open-webui.git
+	conda $defaultDir/.conda/envs
 	cd open-webui/
 
 	cp -RPp .env.example .env
@@ -224,13 +248,18 @@ Setup(){
 	npm run build
 
 	cd backend/
-	pip install -r requirements.txt -U
 	
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	
 	sed -ri "s|exec uvicorn|python -m uvicorn|g" start.sh
+	sed -ri "s|-8080|-$httpPort|g" start.sh
 
 	chmod -Rf 770 $defaultDir
+
+	mkdir -p $defaultDir/config/conda
+	conda create --prefix $defaultDir/config/conda/open-webui python=3.11 -y
+	chown -Rf $defaultUser:$defaultUser $defaultDir/config/conda
+	sudo -u $defaultUser bash -c "$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
 	
 	systemctl enable --now ollama open-webui llaman-backup.timer
 	
