@@ -1,0 +1,432 @@
+#!/bin/bash
+
+declare -g promptResult=null
+declare -g presentListResult=null
+
+PromptUser()
+{
+	# prompt types = [Yn,yN,dir,file,num,usr,str]
+	_promptType=$1
+	_promptText="$2"
+	_minNumber=$3
+	_maxNumber=$4
+	_inputText=$5
+	_yesOrNo=null
+	_dir=null
+	_file=null
+	_num=null
+	_usr=NULL
+	_str=
+
+	echo "$_promptText"
+
+	case $_promptType in
+		"Yn")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="Y/n"
+			fi
+			while [[ ! $_yesOrNo == [yY][eE][sS] ]] || [[ ! $_yesOrNo == [yY] ]] || [[ ! $_yesOrNo == [nN][oO] ]] || [[ ! $_yesOrNo == [nN] ]] || [[ ! $_yesOrNo == "" ]]; do
+				read -p "[$_inputText] >>> " _yesOrNo
+				if [[ $_yesOrNo == "" ]] || [[ $_yesOrNo == [yY][eE][sS] ]] || [[ $_yesOrNo == [yY] ]]; then
+					return 0
+				elif [[ $_yesOrNo == [nN][oO] ]] || [[ $_yesOrNo == [nN] ]]; then
+					return 1
+				else
+					_yesOrNo=null
+					echo
+					echo "ERROR: Invalid input, please enter Yes or No!"
+				fi
+			done
+		;;
+		"yN")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="y/N"
+			fi
+			while [[ ! $_yesOrNo == [yY][eE][sS] ]] || [[ ! $_yesOrNo == [yY] ]] || [[ ! $_yesOrNo == [nN][oO] ]] || [[ ! $_yesOrNo == [nN] ]] || [[ ! $_yesOrNo == "" ]]; do
+				read -p "[$_inputText] >>> " _yesOrNo
+				if [[ $_yesOrNo == [yY][eE][sS] ]] || [[ $_yesOrNo == [yY] ]]; then
+					return 0
+				elif [[ $_yesOrNo == "" ]] || [[ $_yesOrNo == [nN][oO] ]] || [[ $_yesOrNo == [nN] ]]; then
+					return 1
+				else
+					_yesOrNo=null
+					echo
+					echo "ERROR: Invalid input, please enter Yes or No!"
+				fi
+			done
+		;;
+		"dir")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="/path/to/directory"
+			fi
+			while [[ ! -d $_dir ]]; do
+				read -p "[$_inputText] >>> " "_dir"
+				if [[ -d $_dir ]]; then
+					promptResult="$_dir"
+					return 0
+				else
+					echo
+					echo "ERROR: Input directory does not exist!"
+				fi
+			done
+		;;
+		"file")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="/path/to/file"
+			fi
+			while [[ ! -f $_file ]]; do
+				read -p "[$_inputText] >>> " "_file"
+				if [[ -f $_file ]]; then
+					promptResult="$_file"
+					return 0
+				else
+					echo
+					echo "ERROR: Input file does not exist!"
+				fi
+			done
+		;;
+		"num")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="$_minNumber-$_maxNumber"
+			fi
+			while [[ ! $_num =~ ^[0-9]+$ ]]; do
+				read -p "[$_inputText] >>> " _num
+				if [[ $_num -lt $_minNumber ]] || [[ $_num -gt $_maxNumber ]]; then
+					echo
+					_num=null
+					echo "ERROR: Input must be between $_minNumber and $_maxNumber"
+				elif [[ $_num =~ ^[0-9]+$ ]]; then
+					promptResult=$_num
+					return 0
+				else
+					echo
+					echo "ERROR: Input is not a number!"
+				fi
+			done
+		;;
+		"usr")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="username"
+			fi
+			while [[ "$_usr" =~ [A-Z] ]] || [[ "$_usr" =~ \ |\' ]] || [[ "$_usr" == "" ]]; do
+				read -p "[$_inputText] >>> " "_usr"
+				if [[ ! "$_usr" =~ [A-Z] ]] && [[ ! "$_usr" =~ \ |\' ]] && [[ ! "$_usr" == "" ]]; then
+					promptResult=$_usr
+					return 0
+				else
+					echo
+					echo "ERROR: Inputted username has a space or a capital letter!"
+				fi
+			done
+		;;
+		"str")
+			if [[ ! -n $_inputText ]]; then
+				_inputText="string"
+			fi
+			while [[ ! -n $_str ]]; do
+				read -p "[$_inputText] >>> " "_str"
+				if [[ -n $_str ]]; then
+					promptResult=$_str
+					return 0
+				else
+					echo
+					echo "ERROR: No input detected!"
+				fi
+			done
+		;;
+		*)
+			echo "ERROR: Invalid prompt type $_promptType"
+		;;
+	esac
+# Default yes
+# if PromptUser Yn "Example yes or no question?" 0 0 "Y/n"; then
+#	echo "pass"
+# else
+#	echo "fail"
+# fi
+
+# Default no
+# if PromptUser yN "Example yes or no question?" 0 0 "y/N"; then
+#	echo "pass"
+# else
+#	echo "fail"
+# fi
+
+# Check for directory, return directory
+# PromptUser dir "Enter a valid directory" 0 0 "/path/to/directory"
+# echo "Directory entered = $promptResult"
+
+# Check for file, return file
+# PromptUser file "Enter a valid file" 0 0 "/path/to/file"
+# echo "File entered = $promptResult"
+
+# Check if number, return number entered
+# PromptUser num "Enter a valid number" minNumber maxNumber "$minNumber-$maxNumber"
+# echo "Number entered = $promptResult"
+
+# Check username for uppercase or spaces, return username
+# PromptUser usr "Enter a valid username" 0 0 "username"
+# echo "Username entered = $promptResult"
+
+# Check if string variable is not empty, return string
+# PromptUser str "Enter a string" 0 0 "string"
+# echo "String entered = $promptResult"
+}
+
+RoundNumber()
+{
+	_number="$1"
+	_numberRounded=$(bc <<< "($_number+.5)/1")
+	echo "$_numberRounded"
+}
+
+SetVar() {
+	# SetVar testVar "newVarContent" "fileToChange" varType dataType
+	# SetVar testVar "New Var Content" "/path/to/file.conf" bash string
+	varToChange=$1
+	newVarContent=$2
+	fileToChange=$3
+	varType="$4"
+	dataType=$5
+
+	if [[ ! -n $varToChange ]] || [[ ! -n $newVarContent ]]; then
+		echo "ERROR: Function SetVar requires at least 4 parameters: varToChange newVarContent fileToChange varType"
+		return 1
+	fi
+
+	case $varType in
+		bash)
+			case $dataType in
+				array)
+					if [[ ! -f "$fileToChange" ]]; then
+						echo "$varToChange=(\"$newVarContent\")" > $fileToChange
+					elif ( ! grep -q $varToChange "$fileToChange" ); then
+						echo "$varToChange=(\"$newVarContent\")" >> $fileToChange
+					else
+						sed -i "s|$varToChange=.*|$varToChange=\(\"$newVarContent\"\)|g" $fileToChange
+					fi
+				;;
+				string)
+					if [[ ! -f "$fileToChange" ]]; then
+						echo "$varToChange=\"$newVarContent\"" > $fileToChange
+					elif ( ! grep -q $varToChange "$fileToChange" ); then
+						echo "$varToChange=\"$newVarContent\"" >> $fileToChange
+					else
+						sed -i "s|$varToChange=.*|$varToChange=\"$newVarContent\"|g" $fileToChange
+					fi
+				;;
+				*)
+					if [[ ! -f "$fileToChange" ]]; then
+						echo "$varToChange=$newVarContent" > $fileToChange
+					elif ( ! grep -q $varToChange "$fileToChange" ); then
+						echo "$varToChange=$newVarContent" >> $fileToChange
+					else
+						sed -i "s|$varToChange=.*|$varToChange=$newVarContent|g" $fileToChange
+					fi
+				;;
+			esac
+		;;
+		ini)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "$varToChange = $newVarContent" > $fileToChange
+			elif ( ! grep -q "$varToChange " "$fileToChange" ); then
+				echo "$varToChange = $newVarContent" >> $fileToChange
+			else
+				sed -i "s|$varToChange .*|$varToChange = $newVarContent|g" $fileToChange
+			fi
+		;;
+		json)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "ERROR: json file does not exist!"
+			elif grep -q "\"$varToChange\":" "$fileToChange"; then
+				case $dataType in
+					string)
+						sed -i "s|\"$varToChange.*\"|\"$varToChange\": \"$newVarContent\"|g" $fileToChange
+					;;
+					number)
+						sed -i "s|\"$varToChange\": .*[0-9]|\"$varToChange\": $newVarContent|g" $fileToChange
+					;;
+					*)
+						echo "ERROR: Unknown json dataType $dataType!"
+						echo "    Allowed json data types: \"string\" \"number\""
+					;;
+				esac
+			else
+				echo "ERROR: Variable $varToChange does not exist in $fileToChange"
+			fi
+		;;
+		yaml)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "$varToChange: $newVarContent" > $fileToChange
+			elif grep -q "^$varToChange:" "$fileToChange"; then
+				sed -i "s|^$varToChange: .*$|$varToChange: $newVarContent|g" $fileToChange
+			else
+				echo "" >> $fileToChange
+				echo "$varToChange: $newVarContent" >> $fileToChange
+			fi
+		;;
+		xml)
+			if [[ ! -f "$fileToChange" ]]; then
+				echo "File $fileToChange does not exist."
+				return 1
+			fi
+
+			if ( grep -q "$varToChange=\".*\"" "$fileToChange" ) && ( grep -q "<$varToChange>.*</$varToChange>" "$fileToChange" ) && [[ ! -n $dataType ]]; then
+				echo "ERROR: multiple xml variable types of the same name in document!"
+				return 1
+			elif ( grep -q "$varToChange=\".*\"" "$fileToChange" ) && [[ $dataType == "attribute" ]]; then
+				# $varToChange="timeout" <application timeout="30">
+				sed -i "s|$(grep -oP "$varToChange=\".*?\"" "$fileToChange")|$varToChange=\"$newVarContent\"|g" $fileToChange
+			elif ( grep -q "<$varToChange>.*</$varToChange>" "$fileToChange" ) && [[ $dataType == "element" ]]; then
+				# $varToChange="port" <port>30</port>
+				sed -i "s|<$varToChange>.*</$varToChange>|<$varToChange>$newVarContent</$varToChange>|g" $fileToChange
+			elif ( grep -q "<$varToChange .*/>" "$fileToChange" ) && [[ $dataType == "self-closing" ]]; then
+				# $varToChange="newport" <newport 30/>
+				sed -i "s|<$varToChange .*/>|<$varToChange $newVarContent/>|g" $fileToChange
+			else
+				echo "ERROR: Unknown XML dataType $dataType!"
+				echo "    Allowed data types: \"attribute\" \"element\" \"self-closing\""
+				return 1
+			fi
+		;;
+		*)
+			echo "ERROR: Unsupported varType: $varType"
+			echo "    Supported variable types: \"bash\" \"ini\" \"json\" \"yaml\" \"xml\""
+			return 1
+		;;
+	esac
+}
+
+DelVar()
+{
+	# DelVar varToDelete fileToChange
+	# Use only with shell, ini, and yaml variables. Be very careful with deleting xml and json variables.
+	varToDelete=$1
+	fileToChange=$2
+	if ( ! grep -q $varToChange "$fileToChange" ); then
+		echo "ERROR: Variable $varToChange is not in $fileToChange"
+		return 1
+	else
+		sed -i "/$varToDelete/d" $fileToChange
+		return 0
+	fi
+}
+
+IsVideo()
+{
+	_video=$1
+	if [[ $_video == *"."[mMaA][kKvVpP][iIvV4] ]]; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+Countdown()
+{
+	_time=$1
+	while [ $_time -gt 0 ]; do
+		printf "\r $_time seconds"
+		_time=$(($_time - 1))
+		sleep 1
+	done
+	printf "\n Done!"
+	printf "\n"
+}
+
+HasSudo()
+{
+	if [ "$EUID" -ne 0 ]; then
+		echo "ERROR: Permission denied for $USER"
+		echo "This command requires root privileges"
+		return 1
+		exit
+	else
+		return 0
+	fi
+}
+
+AreDirectories()
+{
+	directoriesToCheck="$1"
+	isDirectory=true
+	for item in $directoriesToCheck
+	do
+		if [[ ! -d $item ]]; then
+			isDirectory=false
+			# echo "$item is not a directory"
+		fi
+	done
+	if $isDirectory; then
+		# echo "$directoriesToCheck are directories"
+		return 0
+	else
+		# echo "$directoriesToCheck are not directories"
+		return 1
+	fi
+
+# Directory variable
+#if areDirectories "${defaultPath[*]}"; then
+#	echo "Directories in array are directories."
+#fi
+# Directory array
+#if areDirectories "/path/to/dir1 /path/to/dir2"; then
+#	echo "Directories in array are directories."
+#fi
+}
+
+Log()
+{
+	# Log "ERROR | ERROR MESSAGE" $logFile
+	_errorMessage=$1
+	_logFile=$2
+	_logFileNoDir=$(echo "$_logFile" | rev | cut -d / -f 1 | rev)
+	_logFileDir=$(echo "$_logFile" | sed -r "s|$_logFileNoDir||g")
+	_date="[ $(date) ] |"
+
+	echo "$_date $_errorMessage" >> $_logFile
+	# echo "$_errorMessage"
+
+	USER1=$(stat -c '%U' "$_logFileDir")
+	chown -f $USER1:$USER1 $_logFile
+	chmod -f 770 $_logFile
+
+	_logFileLines=$(wc -l $_logFile | cut -d " " -f 1)
+
+	if [ $_logFileLines -ge 5000 ]; then
+		sed -i '1d' $_logFile
+	fi
+}
+
+PresentList()
+{
+	list="$1"
+	prompt="$2"
+	query="$3"
+
+	if [[ -d "$list" ]]; then
+		list="$(ls -1 $list | grep "$query")"
+	fi
+
+	listNumbered=$(echo "$list" | cat -n)
+	itemsInList=$(echo "$list" | wc -l)
+
+	echo "$listNumbered"
+	PromptUser num "$prompt" 1 $itemsInList "1-$itemsInList"
+	selectedNumber=$promptResult
+	selectedItem=$(echo "$list" | head -n $selectedNumber | tail -n 1)
+	presentListResult="$selectedItem"
+
+# PresentList "$listOfItems" "Please enter the number for the item you want to select." "(optional) search query"
+# itemSelected=$presentListResult
+}
+
+ViewLog()
+{
+	logDir=$1
+	PresentList "$logDir" "> Please enter the number corresponding with the log you wish to view." ".log"
+	logToView=$presentListResult
+	less -P 'File %f Position %lb (%l lines) %P\% | Press "Q" to exit' +G -FS $logDir/$logToView
+
+# ViewLog "/dir/to/logs"
+}
