@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
-llamanVersion=0.1.8
+llamanVersion=0.1.9
 httpPort=8080
 defaultUser=open-webui
 defaultDir=/opt/open-webui
@@ -122,7 +122,7 @@ SetupConda(){
 		bash $defaultDir/miniconda3/miniconda.sh -b -u -p $defaultDir/miniconda3;\
 		rm $defaultDir/miniconda3/miniconda.sh;\
 		source $defaultDir/miniconda3/bin/activate;\
-		conda init --all;\
+		$defaultDir/miniconda3/bin/conda init --all;\
 		$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y;\
 		$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
 }
@@ -249,7 +249,6 @@ Setup(){
 
 	cd $defaultDir
 	git clone https://github.com/open-webui/open-webui.git
-	conda $defaultDir/.conda/envs
 	cd open-webui/
 
 	cp -RPp .env.example .env

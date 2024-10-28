@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.8
+llamanVersion=0.1.9
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
