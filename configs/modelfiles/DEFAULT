@@ -1,1 +1,1 @@
-FROM /shared/llms/Pocket-Tiger-Gemma-2B-v1d-Q6_K.gguf
+FROM /shared/llms/josiefied-qwen2.5-14b-instruct-abliterated-v4.Q4_0.gguf

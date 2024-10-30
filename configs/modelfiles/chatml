@@ -1,4 +1,4 @@
-FROM /shared/llms/MN-12B-Celeste-V1.9.i1-Q4_0.gguf
+FROM /shared/llms/UnslopNemo-12B-v4.1.i1-Q4_K_M.gguf
 TEMPLATE """
 {{ if .System }}<|im_start|>system
 {{ .System }}<|im_end|>
