@@ -1,4 +1,4 @@
-FROM /shared/llms/Mistral-Nemo-Instruct-12B-iMat-Q4_K_M.gguf
+FROM /shared/llms/Mistral-Small-22B-ArliAI-RPMax-v1.1.i1-Q4_K_M.gguf
 TEMPLATE """
 {{- range $i, $_ := .Messages }}
 {{- if eq .Role "user" }}
