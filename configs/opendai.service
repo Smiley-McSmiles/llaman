@@ -1,0 +1,12 @@
+[Unit]
+Description=Opendai
+After=network.target
+
+[Service]
+WorkingDirectory=/opt/open-webui/opendai-speech
+ExecStart=/opt/open-webui/opendai-speech/start-tts.sh
+RestartForceExitStatus=3
+User=open-webui
+
+[Install]
+WantedBy=multi-user.target
