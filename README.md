@@ -37,7 +37,7 @@ cd ~/
 * **Backup** - Input a directroy to output a backup archive
 * **Backup Utility** - Start the Backup Utility to set up automatic backups
 * **Import** - Import a .tar file to pick up where you left off on another system
- - _Use `sudo ./setup.sh /path/to/llaman-backup.tar` to import/restore a backup_
+  - _Use `sudo ./setup.sh /path/to/llaman-backup.tar` to import/restore a backup_
 * **Get Version** - Get the current installed version of LLaMan, Ollama, and Open-WebUI
 * **View Logs** - Select from a list of logs to view
 * **Uninstall** - Uninstalls LLaMan, Ollama, Open-WebUI, and Opend-AI-Speech completely
