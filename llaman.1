@@ -7,7 +7,7 @@
 .B LLaMan - An Ollama and Open-WebUI manager written in BASH
 
 .SH VERSION
-.B LLaMan v0.1.9
+.B LLaMan v0.2.0
 
 .SH SYNOPSIS
 .B llaman
@@ -22,43 +22,45 @@ is a lightweight BASH CLI (Command Line Interface) tool for installing and manag
 .TP
 .SS COMMANDS
 .TP
-.B -b, --backup                 Create llaman-backup.tar archive.
+.B -b,    --backup               Create llaman-backup.tar archive.
 .TP
-.B -bu, --backup-utility        Launch the automatic Backup Utility.
+.B -bu,   --backup-utility       Launch the automatic Backup Utility.
 .TP
-.B -i, --import                 Launch the import backup utility.
+.B -i,    --import               Launch the import backup utility.
 .TP
-.B -e, --enable                 Enable Ollama and Open-WebUI on System Start.
+.B -e,    --enable               Enable Ollama and Open-WebUI on System Start.
 .TP
-.B -d, --disable                Disable Ollama and Open-WebUI on System Start.
+.B -d,    --disable              Disable Ollama and Open-WebUI on System Start.
 .TP
-.B -s, --start                  Start Ollama and Open-WebUI.
+.B -s,    --start                Start Ollama and Open-WebUI.
 .TP
-.B -S, --stop                   Stop Ollama and Open-WebUI.
+.B -S,    --stop                 Stop Ollama and Open-WebUI.
 .TP
-.B -r, --restart                Restart Ollama and Open-WebUI.
+.B -r,    --restart              Restart Ollama and Open-WebUI.
 .TP
-.B -t, --status                 Status of Ollama and Open-WebUI.
+.B -t,    --status               Status of Ollama and Open-WebUI.
 .TP
-.B -I, --install                Install a downloaded .gguf model.
+.B -I,    --install              Install a downloaded .gguf model.
 .TP
-.B -R, --remove                 Remove a model from Ollama
+.B -R,    --remove               Remove a model from Ollama
 .TP
-.B -rg,   --remove-gguf         Remove downloaded .gguf model
+.B -rg,   --remove-gguf          Remove downloaded .gguf model
 .TP
-.B -D, --download               Download a .gguf file from https://huggingface.co
+.B -D,    --download             Download a .gguf file from https://huggingface.co
 .TP
-.B -u, --update                 Update/check for updates for LLaMan, Ollama, and Open-WebUI
+.B -u,    --update               Update/check for updates for LLaMan, Ollama, and Open-WebUI
 .TP
-.B -cp, --change-port            Change the Open-WebUI port
+.B -cp,   --change-port          Change the Open-WebUI port
 .TP
-.B -v, --version                Get the current installed version of LLaMan.
+.B -cps,  --change-port-speech   ChangeSpeechPort
 .TP
-.B -vl, --view-log              Choose from a list of logs to view.
+.B -v,    --version              Get the current installed version of LLaMan.
 .TP
-.B -h, --help                   Print this Help.
+.B -vl,   --view-log             Choose from a list of logs to view.
 .TP
-.B -X, --uninstall              Uninstall LLaMan, Ollama and Open-WebUI Completely.
+.B -h,    --help                 Print this Help.
+.TP
+.B -X,    --uninstall            Uninstall LLaMan, Ollama and Open-WebUI Completely.
 
 .SH EXAMPLE
 .TP
@@ -67,7 +69,7 @@ is a lightweight BASH CLI (Command Line Interface) tool for installing and manag
 .SH FILES
 .TP
 .I
-/opt/open-webui
+/opt/open-webui/config/llaman.conf
 .TP
 .I
 /usr/bin/llaman

@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.1.9
+llamanVersion=0.2.0
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -9,25 +9,26 @@ LLaMan $llamanVersion
 llaman [PARAMETER]
 
 PARAMETERS:
--b,    --backup           Backup Open-WebUI users and settings
--bu,   --backup-utility   Start the backup utility
--i,    --import           Import Open-WebUI archive
--e,    --enable           Enable Ollama and Open-WebUI
--d,    --disable          Disable Ollama and Open-WebUI
--s,    --start            Start Ollama and Open-WebUI
--S,    --stop             Stop Ollama and Open-WebUI
--r,    --restart          Restart Ollama and Open-WebUI
--t,    --status           Get status of ollama.service and open-webui.service.
--I,    --install          Install a downloaded .gguf model
--R,    --remove           Remove model from Ollama
--rg,   --remove-gguf      Remove downloaded .gguf model
--D,    --download         Download .gguf file from https://huggingface.co
--u,    --update           Update Ollama and Open-Webui
--cp,    --change-port      Change the Open-WebUI port
--v,    --version          Get LLaMan, Ollama, and Open-Webui version
--vl,   --view-logs        View LLaMan logs
--h,    --help             Display this help menu
--X,    --uninstall        Uninstall LLaMan, Ollama, and Open-Webui
+-b,    --backup             Backup Open-WebUI users and settings
+-bu,   --backup-utility     Start the backup utility
+-i,    --import             Import Open-WebUI archive
+-e,    --enable             Enable Ollama and Open-WebUI
+-d,    --disable            Disable Ollama and Open-WebUI
+-s,    --start              Start Ollama and Open-WebUI
+-S,    --stop               Stop Ollama and Open-WebUI
+-r,    --restart            Restart Ollama and Open-WebUI
+-t,    --status             Get status of ollama.service and open-webui.service.
+-I,    --install            Install a downloaded .gguf model
+-R,    --remove             Remove model from Ollama
+-rg,   --remove-gguf        Remove downloaded .gguf model
+-D,    --download           Download .gguf file from https://huggingface.co
+-u,    --update             Update Ollama and Open-Webui
+-cp,   --change-port        Change the Open-WebUI port
+-cps,  --change-port-speech ChangeSpeechPort
+-v,    --version            Get LLaMan, Ollama, and Open-Webui version
+-vl,   --view-logs          View LLaMan logs
+-h,    --help               Display this help menu
+-X,    --uninstall          Uninstall LLaMan, Ollama, and Open-Webui
 Example: sudo llaman -e
 "
 
@@ -42,19 +43,8 @@ Backup()
 	_fileName="llaman-backup-$_date.tar"
 	_tarPath=$backupDirectory/$_fileName
 	
-	if [[ ! -d /opt/open-webui/backup ]]; then
-		mkdir /opt/open-webui/backup
-	fi
-	
-	cp -rf $defaultDir/open-webui/backend/data $defaultDir/backup/
-	cp -rf $defaultDir/config $defaultDir/backup/
-	cp -rf $defaultDir/log $defaultDir/backup/
-	cp -rf $defaultDir/miniconda3 $defaultDir/backup/
-	cp -rf $serviceDirectory/llaman-backup.timer $defaultDir/backup/
-	cp -f $defaultDir/start.sh $defaultDir/backup/
-	time tar cf "$_tarPath" /opt/open-webui/backup
-	
-	rm -rf $defaultDir/backup
+	ollamaDirs="$(whereis ollama | cut -d ' ' -f 2-)"
+	time tar cf "$_tarPath" $defaultDir /usr/bin/llaman /usr/bin/llaman-functions $ollamaDirs /etc/systemd/system/ollama.service $serviceDirectory/llaman-backup.service $serviceDirectory/llaman-backup.timer $serviceDirectory/open-webui.service
 	
 	USER1=$(stat -c '%U' "$backupDirectory")
 	chown -f $USER1:$USER1 "$_tarPath"
@@ -231,20 +221,14 @@ Import() {
 
 	source $configFile
 	
+	echo "> WARNING!: This procedure will completely erase $defaultDir"
 	importTarDir=$backupDirectory
 	PresentList "$importTarDir" "Please enter the number corresponding to the .tar you want to select." "llaman-backup-"
 	importTar=$importTarDir/$presentListResult
 	
 	llaman -S
+	rm -rf $defaultDir
 	tar xf $importTar -C /
-	cp -rf $defaultDir/backup/data $defaultDir/open-webui/backend/ 
-	cp -rf $defaultDir/backup/config $defaultDir/
-	cp -rf $defaultDir/backup/log $defaultDir/
-	cp -rf $defaultDir/backup/miniconda3 $defaultDir/
-	cp -rf $defaultDir/backup/start.sh $defaultDir/
-	cp -rf $defaultDir/backup/llaman-backup.timer $serviceDirectory/
-	
-	rm -rf /$defaultDir/backup
 
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
@@ -355,14 +339,24 @@ DownloadModel()
 
 ChangePort()
 {
-	SetVar httpPort $httpPort "$configFile" bash int
-	PromptUser num "Enter a valid port" 1001 9999 "$minNumber-$maxNumber"
+	PromptUser num "Enter a valid port" 1024 65535 "$minNumber-$maxNumber"
 	httpPort=$promptResult
 	echo "> Changing Open-WebUI port to $httpPort"
-
+	SetVar httpPort $httpPort "$configFile" bash int
 	sed -ri "s|-8080|-$httpPort|g" $defaultDir/open-webui/backend/start.sh
 	Log "SETUP | SetVar httpPort=$httpPort" $logFile
 	Control restart
+}
+
+ChangePortSpeech()
+{
+	PromptUser num "Enter a valid port" 1024 65535 "$minNumber-$maxNumber"
+	opendaiPort=$promptResult
+	echo "> Changing Open-WebUI port to $opendaiPort"
+	SetVar httpPort $opendaiPort "$configFile" bash int
+	sed -ri "s|-8080|-$opendaiPort|g" $defaultDir/open-webui/backend/start.sh
+	Log "SETUP | SetVar httpPort=$opendaiPort" $logFile
+	systemctl restart opendai
 }
 
 UpdateWeb()
@@ -372,36 +366,122 @@ UpdateWeb()
 	fi
 
 	source $configFile
+	systemctl stop open-webui
+	cp -rfv $defaultDir/open-webui/backend/data $defaultDir/
+	rm -rf $defaultDir/open-webui
+	git clone https://github.com/open-webui/open-webui.git $defaultDir/
 
-	cd $defaultDir
-	
-	if [[ -d open-webui-backup ]]; then
-		rm -rf open-webui-backup
-	fi
-	
-	mv open-webui open-webui-backup
-	git clone https://github.com/open-webui/open-webui.git
-	cd open-webui/
-
+	cd $defaultDir/open-webui/
 	cp -RPp .env.example .env
-
 	npm i
 	npm run build
+	cd -
 
-	cd backend/
-	
 	# Move data from previous install
-	cp -rfv ../../open-webui-backup/backend/data ./
+	cp -rfv $defaultDir/data $defaultDir/open-webui/backend/
 
-	sed -ri "s|exec uvicorn|python -m uvicorn|g" start.sh
-	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" start.sh
+	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
+	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" $defaultDir/open-webui/backend/start.sh
+	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "False").lower() == "false"/g' $defaultDir/open-webui/backend/open-webui/config.py
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
-	sudo -u $defaultUser bash -c "\
-	$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
-	Control restart
-	
+	sudo -u $defaultUser bash -c "
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+		conda init --all"
+	sudo -u $defaultUser bash -c "
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+		conda activate $defaultDir/config/conda/open-webui
+		pip install -r $defaultDir/open-webui/backend/requirements.txt
+		conda deactivate"
+	systemctl start open-webui
 }
+
+#UpdateWeb()
+#{
+#	if ! HasSudo; then
+#		exit
+#	fi
+#
+#	source $configFile
+#	systemctl stop open-webui
+#	if [[ -d $defaultDir/open-webui-backup ]]; then
+#		rm -rf $defaultDir/open-webui-backup
+#	fi
+#
+#	mv $defaultDir/open-webui $defaultDir/open-webui-backup
+#	git clone https://github.com/open-webui/open-webui.git $defaultDir/
+#	cp -RPp $defaultDir/open-webui/.env.example $defaultDir/open-webui/.env
+#
+#	cd $defaultDir/open-webui/
+#	npm i
+#	npm run build
+#	cd -
+#
+#	# Move data from previous install
+#	cp -rfv $defaultDir/open-webui/open-webui-backup/backend/data $defaultDir/open-webui/backend/
+#
+#	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
+#	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" $defaultDir/open-webui/backend/start.sh
+#	chown -Rf $defaultUser:$defaultUser $defaultDir
+#	chmod -Rf 770 $defaultDir
+#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/open-webui
+#	$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt
+#	$defaultDir/miniconda3/bin/deactivate
+#	systemctl start open-webui
+#}
+
+UpdateTTS(){
+	if ! HasSudo; then
+		exit
+	fi
+
+	pyVersion="3.11"
+	systemctl stop opendai
+	source $defaultDir/miniconda3/bin/activate
+	chown -Rf $defaultUser:$defaultUser $defaultDir
+	sudo -u $defaultUser bash -c "cp $defaultDir/opendai-speech/start-tts.sh $defaultDir/
+		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
+		cp $defaultDir/start-tts.sh $defaultDir/opendai-speech/
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+		conda init --all"
+	sudo -u $defaultUser bash -c "
+		conda activate $defaultDir/config/conda/opendai
+		pip install -U -r $defaultDir/opendai-speech/requirements.txt
+		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
+		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
+		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
+		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
+		sed -i 's/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:${opendaiPort}\/v1,/g' $defaultDir/opendai-speech/say.py
+		conda deactivate"
+	systemctl start opendai
+}
+
+#UpdateTTS(){
+#	if ! HasSudo; then
+#		exit
+#	fi
+#
+#	pyVersion="3.11"
+#	systemctl stop opendai
+#	source $defaultDir/miniconda3/bin/activate
+#	if [[ -d $defaultDir/opendai-speech-backup ]]; then
+#		rm -rf $defaultDir/opendai-speech-backup
+#		mv -f $defaultDir/opendai-speech $defaultdir/opendai-speech-backup
+#	elif [[ -d $defaultDir/opendai-speech ]]; then
+#		mv -f $defaultDir/opendai-speech $defaultdir/opendai-speech-backup
+#	fi
+#	git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
+#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/opendai
+#	$defaultDir/config/conda/opendai/bin/pip install -U -r $defaultDir/opendai-speech/requirements.txt
+#	cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
+#	cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
+#	sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
+#	sed -i 's/api_key = os.environ.get("OPENAI_API_KEY", "sk-ip"),/api_key = "sk-11111111111",/g' $defaultDir/opendai-speech/say.py
+#	sed -i "s/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:$opendaiPort\/v1,/g" $defaultDir/opendai-speech/say.py
+#	chown -Rf $defaultUser:$defaultUser $defaultDir
+#	$defaultDir/miniconda3/bin/deactivate
+#	systemctl start opendai
+#}
 
 Update()
 {
@@ -416,6 +496,8 @@ Update()
 	latestOllamaVersion=$(GetLatestOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
 	latestWebUIVersion=$(GetLatestWebUIVersion)
+	installedOpendAIVersion=$(GetOpendAIVersion)
+	latestOpendAIVersion=$(getLatestOpendAIVersion)
 	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
@@ -429,6 +511,13 @@ Update()
 		Log "UPDATE | Updated Open-WebUI to v$latestWebUIVersion" $logFile
 	else
 		echo "> The latest Open Web-UI version $latestWebUIVersion is already installed."
+	fi
+
+	if [[ ! "$installedOpendAIVersion" == "$latestOpendAIVersion" ]]; then
+		UpdateTTS
+		Log "UPDATE | Updated OpendAI-Speech to v$latestOpendAIVersion" $logFile
+	else
+		echo "> The latest Open Web-UI version $latestOpendAIVersion is already installed."
 	fi
 	
 	if [[ ! "$installedLlamanVersion" == "$latestLlamanVersion" ]]; then
@@ -451,9 +540,11 @@ GetVersions()
 
 	installedOllamaVersion=$(GetOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
+	installedOpendAIVersion=$(GetOpendAIVersion)
 	echo "LLaMan v$llamanVersion"
 	echo "Ollama v$installedOllamaVersion"
 	echo "Open-WebUI v$installedWebUIVersion"
+	echo "OpendAI-Speech v$installedOpendAIVersion"
 }
 
 GetLatestLlamanVersion()
@@ -482,6 +573,16 @@ GetWebUIVersion()
 	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "[0-9].[0-9]\.[0-9][0-9]")
 }
 
+GetOpendAIVersion(){
+	source $configFile
+	echo $(cat $defaultDir/opendai-speech/README.md | grep "Version.*[0-1]\." | head -n 1 | grep -o "[0-9]\.[0-9][0-9]\.[0-9]")
+}
+
+GetLatestOpendAIVersion()
+{
+	echo $(curl -fsSL https://github.com/matatonic/openedai-speech/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9][0-9]\.[0-9]")
+}
+
 Control()
 {
 	if ! HasSudo; then
@@ -491,16 +592,18 @@ Control()
 	source $configFile
 	
 	case "$1" in
-		start) systemctl start ollama open-webui
-         	Log "LLAMAN | Started Ollama and Open-webui" $logFile ;;
-		stop) systemctl stop ollama open-webui
-         	Log "LLAMAN | Stopped Ollama and Open-webui" $logFile ;;
-		enable) systemctl enable ollama open-webui
-         	Log "LLAMAN | Enabled Ollama and Open-webui" $logFile ;;
-		disable) systemctl disable ollama open-webui
-         	Log "LLAMAN | Disabled Ollama and Open-webui" $logFile ;;
-		restart) systemctl restart ollama open-webui
-         	Log "LLAMAN | Restarted Ollama and Open-webui" $logFile ;;
+		start) systemctl start ollama open-webui opendai
+			Log "LLAMAN | Started Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
+		stop) systemctl stop ollama open-webui opendai
+			Log "LLAMAN | Stopped Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
+		enable) systemctl enable ollama open-webui opendai
+			Log "LLAMAN | Enabled Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
+		disable) systemctl disable ollama open-webui opendai
+			Log "LLAMAN | Disabled Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
+		restart) systemctl restart ollama open-webui opendai
+			Log "LLAMAN | Restarted Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
+		status) systemctl status ollama open-webui opendai
+			Log "LLAMAN | Restarted Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
 	esac
 }
 
@@ -511,21 +614,21 @@ Uninstall()
 	fi
 
 	source $configFile
-	if PromptUser yN "Are you sure you want to fully uninstall LLaman/Ollama/Open-webui?" 0 0 "y/N"; then
+	if PromptUser yN "Are you sure you want to fully uninstall LLaman/Ollama/Open-webui/OpendAI-Speech?" 0 0 "y/N"; then
 		llaman -d -S
 		userdel $defaultUser
 		userdel ollama
-		sleep 3
 		groupdel $defaultUser
 		groupdel ollama
-		sleep 2
-		rm -f $serviceLocation/open-webui.service
-		rm -f $serviceLocation/ollama.service
-		rm -r /usr/local/bin/ollama
-		rm -rf $defaultDir
-		rm -rf $ollamaModelsDirectory
-		rm -r /usr/share/ollama
-		rm -r /usr/bin/llaman 
+		rm -rf $serviceLocation/open-webui.service \
+			$serviceLocation/ollama.service \
+			/usr/local/bin/ollama \
+			$defaultDir \
+			$ollamaModelsDirectory \
+			/usr/share/ollama \
+			/usr/bin/llaman
+		echo ">> LLaMan | Ollama | Open-WebUI | OpendAI-Speech <<"
+		echo ">>                HAS BEEN DELETED!              <<"
 	 else
 		exit
 	fi
@@ -551,14 +654,14 @@ if [ -n "$1" ]; then
          -S | --stop) Control "stop" ;;
          -s | --start) Control "start" ;;
          -r | --restart) Control "restart" ;;
-         -t | --status) systemctl status ollama
-         	systemctl status open-webui ;;
+         -t | --status) Control "status" ;;
          -I | --install) InstallModel ;;
          -R | --remove) RemoveModel ;;
          -rg | --remove-gguf) RemoveGGUF ;;
          -D | --download) DownloadModel ;;
          -u | --update) Update ;;
          -cp | --change-port) ChangePort ;;
+         -cps | --change-port-speech) ChangePortSpeech ;;
          -v | --version) GetVersions ;;
          -vl | --view-logs) if ! HasSudo; then
 		exit

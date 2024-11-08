@@ -1,8 +1,9 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
-llamanVersion=0.1.9
+llamanVersion=0.2.0
 httpPort=8080
+opendaiPort=8000
 defaultUser=open-webui
 defaultDir=/opt/open-webui
 logFile=$defaultDir/log/llaman.log
@@ -17,6 +18,22 @@ Update(){
 	# Conda
 	if [[ ! -d $defaultDir/config/conda/open-webui ]]; then
 		SetupConda
+	fi
+
+	if [[ ! -d $defaultDir/config/conda/opendai ]]; then
+		if PromptUser yN "Would you like to change the default OpendAI port from 8000?" 0 0 "y/N"; then
+			PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
+			opendaiPort=$promptResult
+			echo "> Changing OpendAI port to $opendaiPort"
+		else
+			echo "> Keeping OpendAI on port 8000..."
+		fi
+		SetVar opendaiPort $opendaiPort "$configFile" bash int
+		SetupTTS
+		echo "> Please visit http://localhost:$httpPort"
+		echo "> Thee navigate to the Admin Pane/Settings/Audio in Open-WebUI"
+		echo "> OpenAI API URL: http://localhost:$opendaiPort/v1"
+		echo "> OpenAI API Key: sk-11111111111"
 	fi
 
 	cp -f $DIRECTORY/scripts/llaman /usr/bin/
@@ -114,18 +131,114 @@ InstallDependencies()
 }
 
 SetupConda(){
+	echo "> Setting up Conda..."
 	pyVersion="3.11"
-	sudo -u $defaultUser bash -c "\
-		mkdir -p $defaultDir/miniconda3 $defaultDir/config/conda;\
-		wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $defaultDir/miniconda3/miniconda.sh;\
-		chmod +x $defaultDir/miniconda3/miniconda.sh;\
-		bash $defaultDir/miniconda3/miniconda.sh -b -u -p $defaultDir/miniconda3;\
-		rm $defaultDir/miniconda3/miniconda.sh;\
-		source $defaultDir/miniconda3/bin/activate;\
-		$defaultDir/miniconda3/bin/conda init --all;\
-		$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y;\
-		$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt"
+	sudo -u $defaultUser bash -c "
+		mkdir -p $defaultDir/miniconda3 $defaultDir/config/conda
+		wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $defaultDir/miniconda3/miniconda.sh
+		chmod +x $defaultDir/miniconda3/miniconda.sh
+		bash $defaultDir/miniconda3/miniconda.sh -b -u -p $defaultDir/miniconda3
+		rm $defaultDir/miniconda3/miniconda.sh
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+		conda init --all"
+	sudo -u $defaultUser bash -c "
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+		conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y
+		conda activate $defaultDir/config/conda/open-webui
+		pip install -r $defaultDir/open-webui/backend/requirements.txt"
+	echo "> Finished setting up Conda..."
 }
+
+SetupTTS(){
+	echo "> Setting up OpendAI-Speech..."
+	pyVersion="3.11"
+	sudo -u $defaultUser bash -c "
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+		conda create --prefix $defaultDir/config/conda/opendai python=$pyVersion -y
+		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
+		conda activate $defaultDir/config/conda/opendai
+		pip install -U -r $defaultDir/opendai-speech/requirements.txt
+		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
+		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
+		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
+		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
+		sed -i 's/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:${opendaiPort}\/v1,/g' $defaultDir/opendai-speech/say.py"
+	cp -f $DIRECTORY/scripts/start-tts.sh $defaultDir/opendai-speech/
+	cp -f $DIRECTORY/configs/opendai.service $serviceDirectory/
+	chmod +x $defaultDir/opendai-speech/start-tts.sh
+	echo "> Finished setting up OpendAI-Speech..."
+}
+
+#SetupConda(){
+#	echo "> Setting up Conda..."
+#	pyVersion="3.11"
+#	mkdir -p $defaultDir/miniconda3 $defaultDir/config/conda
+#	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $defaultDir/miniconda3/miniconda.sh
+#	chmod +x $defaultDir/miniconda3/miniconda.sh
+#	bash $defaultDir/miniconda3/miniconda.sh -b -u -p $defaultDir/miniconda3
+#	rm $defaultDir/miniconda3/miniconda.sh
+#	source $defaultDir/miniconda3/bin/activate
+#	$defaultDir/miniconda3/bin/conda init --all
+#	$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y
+#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/open-webui
+#	$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt
+#	$defaultDir/miniconda3/bin/deactivate
+#	chown -Rf $defaultUser:$defaultUser $defaultDir
+#	echo "> Finished setting up Conda..."
+#}
+
+#SetupTTS(){
+#	echo "> Setting up OpendAI-Speech..."
+#	pyVersion="3.11"
+#	cp -f $DIRECTORY/configs/opendai.service $serviceDirectory/
+#	$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/opendai python=$pyVersion -y
+#	$defaultDir/miniconda3/bin/conda init --all
+#	source $defaultDir/miniconda3/bin/activate
+#	git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
+#	cp -f $DIRECTORY/scripts/start-tts.sh $defaultDir/opendai-speech
+#	chmod +x $defaultDir/opendai-speech/start-tts.sh
+#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/opendai
+#	$defaultDir/config/conda/opendai/bin/pip install -U -r $defaultDir/opendai-speech/requirements.txt
+#	cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
+#	cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
+#	sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
+#	sed -i 's/api_key = os.environ.get("OPENAI_API_KEY", "sk-ip"),/api_key = "sk-11111111111",/g' $defaultDir/opendai-speech/say.py
+#	sed -i "s/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:$opendaiPort\/v1,/g" $defaultDir/opendai-speech/say.py
+#	$defaultDir/miniconda3/bin/deactivate
+#	chown -Rf $defaultUser:$defaultUser $defaultDir
+#	echo "> Finished setting up OpendAI-Speech..."
+#}
+
+Import() {
+	if ! HasSudo; then
+		exit
+	fi
+
+	if [ -z $1 ]; then
+		echo "> ./setup.sh -I requires a path to a llaman-backup.tar file"
+		echo ">   For example: sudo ./setup.sh -I /path/to/llaman-backup.tar"
+		exit
+	fi
+
+	importTar="$1"
+
+	echo "> WARNING!: This procedure will completely erase $defaultDir"
+
+	rm -rf $defaultDir
+	echo "> This may take a while..."
+	time tar xf "$importTar" -C /
+
+	chmod +x /usr/bin/llaman* $defaultDir/opendai-speech/start-tts.sh $defaultDir/start.sh /usr/bin/llaman /usr/local/bin/ollama
+	useradd -rd $defaultDir $defaultUser
+	useradd -rd /usr/share/ollama ollama
+	chown -Rf $defaultUser:$defaultUser $defaultDir
+	chmod -Rf 770 $defaultDir
+	chown -Rf ollama:ollama /usr/share/ollama
+	systemctl daemon-reload
+	systemctl enable --now llaman-backup.service llaman-backup.timer ollama open-webui opendai
+	Log "IMPORT | Imported $importTar" $logFile
+}
+
 
 Setup(){
 
@@ -134,12 +247,20 @@ Setup(){
 	serviceDirectory=
 	ollamaModelsDirectory=/usr/share/ollama/.ollama/models
 	
-	if PromptUser yN "Would you like to change the default port from 8080?" 0 0 "y/N"; then
-		PromptUser num "Enter a valid port" 1001 9999 "$minNumber-$maxNumber"
+	if PromptUser yN "Would you like to change the default Open-WebUI port from 8080?" 0 0 "y/N"; then
+		PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
 		httpPort=$promptResult
 		echo "> Changing Open-WebUI port to $httpPort"
 	else
 		echo "> Keeping Open-WebUI on port 8080..."
+	fi
+
+	if PromptUser yN "Would you like to change the default OpendAI port from 8000?" 0 0 "y/N"; then
+		PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
+		opendaiPort=$promptResult
+		echo "> Changing OpendAI port to $opendaiPort"
+	else
+		echo "> Keeping OpendAI on port 8000..."
 	fi
 	
 	PromptUser dir "Please enter the storage directory for .gguf models" 0 0 "/path/to/directory"
@@ -178,6 +299,7 @@ Setup(){
 	SetVar defaultDir $defaultDir "$configFile" bash directory
 	SetVar logFile $logFile "$configFile" bash directory
 	SetVar httpPort $httpPort "$configFile" bash int
+	SetVar opendaiPort $opendaiPort "$configFile" bash int
 	SetVar ggufDirectory $ggufDirectory "$configFile" bash directory
 	SetVar backupDirectory $backupDirectory "$configFile" bash directory
 	SetVar modelFiles $defaultDir/config/modelfiles "$configFile" bash directory
@@ -247,35 +369,39 @@ Setup(){
 	SetVar User $defaultUser $serviceDirectory/open-webui.service bash user
 	Log "SETUP | SetVar serviceDirectory=$serviceDirectory" $logFile
 
-	cd $defaultDir
-	git clone https://github.com/open-webui/open-webui.git
-	cd open-webui/
+	git clone https://github.com/open-webui/open-webui.git $defaultDir/open-webui
+	cp -RPp $defaultDir/open-webui/.env.example $defaultDir/open-webui/.env
 
-	cp -RPp .env.example .env
-
+	cd $defaultDir/open-webui
 	npm i
 	npm run build
+	npx update-browserslist-db@latest
+	cd -
 
-	cd backend/
-	
-	chown -Rf $defaultUser:$defaultUser $defaultDir
-	
-	sed -ri "s|exec uvicorn|python -m uvicorn|g" start.sh
-	sed -ri "s|-8080|-$httpPort|g" start.sh
-
-	chmod -Rf 770 $defaultDir
+	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
+	sed -ri "s|-8080|-$httpPort|g" $defaultDir/open-webui/backend/start.sh
 
 	SetupConda
+	SetupTTS
 	
-	systemctl enable --now ollama open-webui llaman-backup.timer
+	chown -Rf $defaultUser:$defaultUser $defaultDir
+	chmod -Rf 770 $defaultDir
 	
-	echo "> Ollama and Open-WebUI is now installed"
-	echo "> Please visit http://localhost:8080"
+	systemctl enable --now ollama open-webui llaman-backup.timer opendai
+	
+	echo "-------------------------------------------"
+	echo "> Ollama, Open-WebUI, and OpendAI-Speech is now installed"
+	echo "> Please visit http://localhost:$httpPort"
+	echo ">   and navigate to the Audio section in Open-Webui"
+	echo "> OpenAI API URL: http://localhost:$opendaiPort/v1"
+	echo "> OpenAI API Key: sk-11111111111"
 	Log "SETUP | Setup finished" $logFile
 }
 
 if [[ $1 == "-U" ]]; then
 	Update
+elif [[ $1 == "-I" ]]; then
+	Import "$2"
 else
 	Setup
 fi
