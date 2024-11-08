@@ -133,6 +133,7 @@ InstallDependencies()
 SetupConda(){
 	echo "> Setting up Conda..."
 	pyVersion="3.11"
+	sudo chown -Rf $defaultUser:$defaultUser $defaultDir
 	sudo -u $defaultUser bash -c "
 		mkdir -p $defaultDir/miniconda3 $defaultDir/config/conda
 		wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $defaultDir/miniconda3/miniconda.sh
