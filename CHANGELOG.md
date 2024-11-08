@@ -3,7 +3,7 @@
 # LLaMan v0.2.0
 ## Changes
 - Backup now completely backups /opt/open-webui and Ollama for easy import on another machine.
- - Meaning backups will now be rather large!
+  - Meaning backups will now be rather large!
 
 ## Fixes
 - Fixed language in setup.sh
@@ -11,11 +11,11 @@
 
 ## Additions
 - Added OpendAI-Speech integration
- - _Default port is `8000`_
+  - _Default port is `8000`_
 - Added `llaman -cps` (**C**hange **P**ort **S**peech)
- - _Presents a prompt to enter a new port for OpendAI-Speech_
+  - _Presents a prompt to enter a new port for OpendAI-Speech_
 - `sudo ./setup.sh` now has a `-I` option. Supply path to **I**mport a llaman.tar backup.
- - _example:_ `sudo ./setup.sh -I /path/to/llaman-backup.tar`
+  - _example:_ `sudo ./setup.sh -I /path/to/llaman-backup.tar`
 
 # LLaMan v0.1.9
 ## Fixes
