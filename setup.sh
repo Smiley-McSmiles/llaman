@@ -384,7 +384,7 @@ Setup(){
 
 	SetupConda
 	SetupTTS
-	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "False").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
+	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
 	
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir

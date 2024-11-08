@@ -382,7 +382,7 @@ UpdateWeb()
 
 	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
 	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" $defaultDir/open-webui/backend/start.sh
-	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "False").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
+	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
 	sudo -u $defaultUser bash -c "
