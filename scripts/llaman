@@ -352,9 +352,8 @@ ChangePortSpeech()
 {
 	PromptUser num "Enter a valid port" 1024 65535 "$minNumber-$maxNumber"
 	opendaiPort=$promptResult
-	echo "> Changing Open-WebUI port to $opendaiPort"
-	SetVar httpPort $opendaiPort "$configFile" bash int
-	sed -ri "s|-8080|-$opendaiPort|g" $defaultDir/open-webui/backend/start.sh
+	echo "> Changing OpendAI-Speech port to $opendaiPort"
+	SetVar opendaiPort $opendaiPort "$configFile" bash int
 	Log "SETUP | SetVar httpPort=$opendaiPort" $logFile
 	systemctl restart opendai
 }
@@ -497,7 +496,7 @@ Update()
 	installedWebUIVersion=$(GetWebUIVersion)
 	latestWebUIVersion=$(GetLatestWebUIVersion)
 	installedOpendAIVersion=$(GetOpendAIVersion)
-	latestOpendAIVersion=$(getLatestOpendAIVersion)
+	latestOpendAIVersion=$(GetLatestOpendAIVersion)
 	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
