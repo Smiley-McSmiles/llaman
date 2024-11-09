@@ -439,18 +439,19 @@ UpdateTTS(){
 	source $defaultDir/miniconda3/bin/activate
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	sudo -u $defaultUser bash -c "cp $defaultDir/opendai-speech/start-tts.sh $defaultDir/
+		rm -rf $defaultDir/opendai-speech
 		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
 		cp $defaultDir/start-tts.sh $defaultDir/opendai-speech/
 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
 		conda init --all"
 	sudo -u $defaultUser bash -c "
+		source $defaultDir/miniconda3/etc/profile.d/conda.sh
 		conda activate $defaultDir/config/conda/opendai
 		pip install -U -r $defaultDir/opendai-speech/requirements.txt
 		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
 		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
 		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
-		sed -i 's/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:${opendaiPort}\/v1,/g' $defaultDir/opendai-speech/say.py
+		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py"
 		conda deactivate"
 	systemctl start opendai
 }

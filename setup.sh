@@ -162,8 +162,8 @@ SetupTTS(){
 		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
 		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
 		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
-		sed -i 's/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:${opendaiPort}\/v1,/g' $defaultDir/opendai-speech/say.py"
+		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py"
+#	sed -i 's/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:${opendaiPort}\/v1,/g' $defaultDir/opendai-speech/say.py
 	cp -f $DIRECTORY/scripts/start-tts.sh $defaultDir/opendai-speech/
 	cp -f $DIRECTORY/configs/opendai.service $serviceDirectory/
 	chmod +x $defaultDir/opendai-speech/start-tts.sh
