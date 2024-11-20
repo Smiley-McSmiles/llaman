@@ -1,5 +1,9 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.2.1
+## Fixes
+- Fixed updater failing due to wrong git clone directory
+
 # LLaMan v0.2.0
 ## Changes
 - Backup now completely backups /opt/open-webui and Ollama for easy import on another machine.
