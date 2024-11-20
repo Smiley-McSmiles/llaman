@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.2.1
+llamanVersion=0.2.2
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -339,18 +339,26 @@ DownloadModel()
 
 ChangePort()
 {
-	PromptUser num "Enter a valid port" 1024 65535 "$minNumber-$maxNumber"
-	httpPort=$promptResult
-	echo "> Changing Open-WebUI port to $httpPort"
-	SetVar httpPort $httpPort "$configFile" bash int
-	sed -ri "s|-8080|-$httpPort|g" $defaultDir/open-webui/backend/start.sh
-	Log "SETUP | SetVar httpPort=$httpPort" $logFile
+	source $configFile
+	newPort=
+	if [[ ! -n $1 ]]; then
+		PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
+		newPort=$promptResult
+	else
+		newPort=$1
+	fi
+	echo "> Changing Open-WebUI port to $newPort"
+	SetVar httpPort $newPort "$configFile" bash int
+	lineToChange=$(grep "PORT=" $defaultDir/open-webui/backend/start.sh | cut -d "-" -f 2 | sed "s|}\"||g")
+	sed -ri "s|-$lineToChange|-$newPort|g" "$defaultDir/open-webui/backend/start.sh"
+	Log "SETUP | SetVar newPort=$newPort" $logFile
 	Control restart
 }
 
 ChangePortSpeech()
 {
-	PromptUser num "Enter a valid port" 1024 65535 "$minNumber-$maxNumber"
+	source $configFile
+	PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
 	opendaiPort=$promptResult
 	echo "> Changing OpendAI-Speech port to $opendaiPort"
 	SetVar opendaiPort $opendaiPort "$configFile" bash int
@@ -382,6 +390,7 @@ UpdateWeb()
 	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
 	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" $defaultDir/open-webui/backend/start.sh
 	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
+	ChangePort $httpPort
 	chown -Rf $defaultUser:$defaultUser $defaultDir
 	chmod -Rf 770 $defaultDir
 	sudo -u $defaultUser bash -c "

@@ -1,5 +1,10 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.2.2
+## Fixes
+- Fixed `llaman -u` not changing port to customized port number
+- Fixed `llaman -cp` not changing port once the port has already been changed
+
 # LLaMan v0.2.1
 ## Fixes
 - Fixed updater failing due to wrong git clone directory
