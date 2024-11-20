@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.2.0
+llamanVersion=0.2.1
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -368,7 +368,7 @@ UpdateWeb()
 	systemctl stop open-webui
 	cp -rfv $defaultDir/open-webui/backend/data $defaultDir/
 	rm -rf $defaultDir/open-webui
-	git clone https://github.com/open-webui/open-webui.git $defaultDir/
+	git clone https://github.com/open-webui/open-webui.git $defaultDir/open-webui
 
 	cd $defaultDir/open-webui/
 	cp -RPp .env.example .env
