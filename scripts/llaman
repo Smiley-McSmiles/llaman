@@ -574,13 +574,13 @@ GetOllamaVersion()
 
 GetLatestWebUIVersion()
 {
-	echo $(curl -fsSL https://github.com/open-webui/open-webui/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9]\.[0-9][0-9]")
+	echo $(curl -fsSL https://github.com/open-webui/open-webui/releases/latest | grep '<title>' | cut -d " " -f 4 | sed "s|v||g")
 }
 
 GetWebUIVersion()
 {
 	source $configFile
-	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "[0-9].[0-9]\.[0-9][0-9]")
+	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "## \[.*\]" | sed "s|## \[||g" | sed "s|\]||g")
 }
 
 GetOpendAIVersion(){
