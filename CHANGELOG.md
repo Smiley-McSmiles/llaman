@@ -1,5 +1,9 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.2.3
+## Changes
+- Removed support for OpendAI-Speech since Open-WebUI has added it's own speech engine.
+
 # LLaMan v0.2.2
 ## Fixes
 - Fixed `llaman -u` not changing port to customized port number

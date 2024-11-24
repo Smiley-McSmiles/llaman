@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.2.2
+llamanVersion=0.2.3
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -24,13 +24,13 @@ PARAMETERS:
 -D,    --download           Download .gguf file from https://huggingface.co
 -u,    --update             Update Ollama and Open-Webui
 -cp,   --change-port        Change the Open-WebUI port
--cps,  --change-port-speech ChangeSpeechPort
 -v,    --version            Get LLaMan, Ollama, and Open-Webui version
 -vl,   --view-logs          View LLaMan logs
 -h,    --help               Display this help menu
 -X,    --uninstall          Uninstall LLaMan, Ollama, and Open-Webui
 Example: sudo llaman -e
 "
+# -cps,  --change-port-speech ChangeSpeechPort
 
 Backup()
 {
@@ -355,16 +355,16 @@ ChangePort()
 	Control restart
 }
 
-ChangePortSpeech()
-{
-	source $configFile
-	PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
-	opendaiPort=$promptResult
-	echo "> Changing OpendAI-Speech port to $opendaiPort"
-	SetVar opendaiPort $opendaiPort "$configFile" bash int
-	Log "SETUP | SetVar httpPort=$opendaiPort" $logFile
-	systemctl restart opendai
-}
+#ChangePortSpeech()
+# {
+# 	source $configFile
+# 	PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
+# 	opendaiPort=$promptResult
+# 	echo "> Changing OpendAI-Speech port to $opendaiPort"
+# 	SetVar opendaiPort $opendaiPort "$configFile" bash int
+# 	Log "SETUP | SetVar httpPort=$opendaiPort" $logFile
+# 	systemctl restart opendai
+# }
 
 UpdateWeb()
 {
@@ -438,33 +438,33 @@ UpdateWeb()
 #	systemctl start open-webui
 #}
 
-UpdateTTS(){
-	if ! HasSudo; then
-		exit
-	fi
+# UpdateTTS(){
+# 	if ! HasSudo; then
+# 		exit
+# 	fi
 
-	pyVersion="3.11"
-	systemctl stop opendai
-	source $defaultDir/miniconda3/bin/activate
-	chown -Rf $defaultUser:$defaultUser $defaultDir
-	sudo -u $defaultUser bash -c "
-		cp $defaultDir/opendai-speech/start-tts.sh $defaultDir/
-		rm -rf $defaultDir/opendai-speech
-		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
-		cp $defaultDir/start-tts.sh $defaultDir/opendai-speech/
-		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-		conda init --all"
-	sudo -u $defaultUser bash -c "
-		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-		conda activate $defaultDir/config/conda/opendai
-		pip install -U -r $defaultDir/opendai-speech/requirements.txt
-		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
-		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
-		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
-		conda deactivate"
-	systemctl start opendai
-}
+# 	pyVersion="3.11"
+# 	systemctl stop opendai
+# 	source $defaultDir/miniconda3/bin/activate
+# 	chown -Rf $defaultUser:$defaultUser $defaultDir
+# 	sudo -u $defaultUser bash -c "
+# 		cp $defaultDir/opendai-speech/start-tts.sh $defaultDir/
+# 		rm -rf $defaultDir/opendai-speech
+# 		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
+# 		cp $defaultDir/start-tts.sh $defaultDir/opendai-speech/
+# 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+# 		conda init --all"
+# 	sudo -u $defaultUser bash -c "
+# 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
+# 		conda activate $defaultDir/config/conda/opendai
+# 		pip install -U -r $defaultDir/opendai-speech/requirements.txt
+# 		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
+# 		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
+# 		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
+# 		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
+# 		conda deactivate"
+# 	systemctl start opendai
+# }
 
 #UpdateTTS(){
 #	if ! HasSudo; then
@@ -506,8 +506,8 @@ Update()
 	latestOllamaVersion=$(GetLatestOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
 	latestWebUIVersion=$(GetLatestWebUIVersion)
-	installedOpendAIVersion=$(GetOpendAIVersion)
-	latestOpendAIVersion=$(GetLatestOpendAIVersion)
+	# installedOpendAIVersion=$(GetOpendAIVersion)
+	# latestOpendAIVersion=$(GetLatestOpendAIVersion)
 	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
@@ -523,12 +523,12 @@ Update()
 		echo "> The latest Open Web-UI version $latestWebUIVersion is already installed."
 	fi
 
-	if [[ ! "$installedOpendAIVersion" == "$latestOpendAIVersion" ]]; then
-		UpdateTTS
-		Log "UPDATE | Updated OpendAI-Speech to v$latestOpendAIVersion" $logFile
-	else
-		echo "> The latest Open Web-UI version $latestOpendAIVersion is already installed."
-	fi
+	# if [[ ! "$installedOpendAIVersion" == "$latestOpendAIVersion" ]]; then
+	# 	UpdateTTS
+	# 	Log "UPDATE | Updated OpendAI-Speech to v$latestOpendAIVersion" $logFile
+	# else
+	# 	echo "> The latest Open Web-UI version $latestOpendAIVersion is already installed."
+	# fi
 	
 	if [[ ! "$installedLlamanVersion" == "$latestLlamanVersion" ]]; then
 		git clone https://github.com/Smiley-McSmiles/llaman
@@ -550,11 +550,11 @@ GetVersions()
 
 	installedOllamaVersion=$(GetOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
-	installedOpendAIVersion=$(GetOpendAIVersion)
+	# installedOpendAIVersion=$(GetOpendAIVersion)
 	echo "LLaMan v$llamanVersion"
 	echo "Ollama v$installedOllamaVersion"
 	echo "Open-WebUI v$installedWebUIVersion"
-	echo "OpendAI-Speech v$installedOpendAIVersion"
+	# echo "OpendAI-Speech v$installedOpendAIVersion"
 }
 
 GetLatestLlamanVersion()
@@ -602,17 +602,17 @@ Control()
 	source $configFile
 	
 	case "$1" in
-		start) systemctl start ollama open-webui opendai
+		start) systemctl start ollama open-webui # opendai
 			Log "LLAMAN | Started Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
-		stop) systemctl stop ollama open-webui opendai
+		stop) systemctl stop ollama open-webui # opendai
 			Log "LLAMAN | Stopped Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
-		enable) systemctl enable ollama open-webui opendai
+		enable) systemctl enable ollama open-webui # opendai
 			Log "LLAMAN | Enabled Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
-		disable) systemctl disable ollama open-webui opendai
+		disable) systemctl disable ollama open-webui # opendai
 			Log "LLAMAN | Disabled Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
-		restart) systemctl restart ollama open-webui opendai
+		restart) systemctl restart ollama open-webui # opendai
 			Log "LLAMAN | Restarted Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
-		status) systemctl status ollama open-webui opendai
+		status) systemctl status ollama open-webui # opendai
 			Log "LLAMAN | Restarted Ollama, Open-webui, and OpendAI-Speech" $logFile ;;
 	esac
 }
@@ -637,8 +637,8 @@ Uninstall()
 			$ollamaModelsDirectory \
 			/usr/share/ollama \
 			/usr/bin/llaman
-		echo ">> LLaMan | Ollama | Open-WebUI | OpendAI-Speech <<"
-		echo ">>                HAS BEEN DELETED!              <<"
+		echo ">> LLaMan | Ollama | Open-WebUI" # | OpendAI-Speech <<"
+		echo ">>     HAS BEEN DELETED!     <<"
 	 else
 		exit
 	fi
@@ -671,7 +671,7 @@ if [ -n "$1" ]; then
          -D | --download) DownloadModel ;;
          -u | --update) Update ;;
          -cp | --change-port) ChangePort ;;
-         -cps | --change-port-speech) ChangePortSpeech ;;
+         # -cps | --change-port-speech) ChangePortSpeech ;;
          -v | --version) GetVersions ;;
          -vl | --view-logs) if ! HasSudo; then
 		exit
