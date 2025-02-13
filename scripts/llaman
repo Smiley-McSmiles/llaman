@@ -1,6 +1,6 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.2.3
+llamanVersion=0.2.4
 configFile=/opt/open-webui/config/llaman.conf
 
 help="
@@ -67,7 +67,7 @@ BackupAuto()
 	
 	Backup
 	
-	tarList=$(ls -1 "$backupDirectory"/llaman-backup*.tar)
+	tarList=$(ls -1 --sort=time -r "$backupDirectory"/llaman-backup*.tar)
 	newestTar=$(echo "$tarList" | tail -n 1)
 	oldestTar=$(echo "$tarList" | head -n 1)
 	tarCount=$(echo "$tarList" | wc -l)

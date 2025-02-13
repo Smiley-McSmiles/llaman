@@ -1,5 +1,9 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.2.4
+## Fixes
+- Fixed bug where automatic backup was deleting newer backup files since December->January
+
 # LLaMan v0.2.3
 ## Changes
 - Removed support for OpendAI-Speech since Open-WebUI has added it's own speech engine.

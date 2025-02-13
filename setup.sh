@@ -1,7 +1,7 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
-llamanVersion=0.2.3
+llamanVersion=0.2.4
 httpPort=8080
 # opendaiPort=8000
 defaultUser=open-webui
