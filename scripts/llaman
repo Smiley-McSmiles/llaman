@@ -294,7 +294,7 @@ RemoveModel()
 
 	source $configFile
 	echo "Installed LLMs:"
-	installedLLMs=$(ollama list | grep -o ".*:latest" | cat -n)
+	installedLLMs=$(ollama list | grep -o ".*:.*" | cut -d " " -f 1 | cat -n)
 	num=$(echo "$installedLLMs" | wc -l)
 	
 	echo "$installedLLMs"
