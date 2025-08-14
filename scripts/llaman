@@ -304,7 +304,7 @@ RemoveModel()
 	if [ $LLMNumber -gt $num ] || [ $LLMNumber -lt 1 ] ; then
 		echo "> Invalid selection. Please choose a number within the range of available LLMs."
 	else
-		selectedFile=$(ollama list | grep -o ".*:latest" | head -n $LLMNumber | tail -n 1)
+		selectedFile=$(ollama list | grep -o ".*:.*" | cut -d " " -f 1 | head -n $LLMNumber | tail -n 1)
 		echo "Selected LLM: $selectedFile"
 		ollama rm $selectedFile
 		Log "REMOVE-MODEL | Removed model $selectedFile" $logFile
