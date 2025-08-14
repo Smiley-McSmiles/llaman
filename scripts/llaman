@@ -1,7 +1,8 @@
 #!/bin/bash
 source /usr/bin/llaman-functions
-llamanVersion=0.2.4
+llamanVersion=0.2.5
 configFile=/opt/open-webui/config/llaman.conf
+pipDir=/opt/open-webui/config/conda/open-webui/lib/python3.11/site-packages/open_webui
 
 help="
 LLaMan $llamanVersion
@@ -349,22 +350,9 @@ ChangePort()
 	fi
 	echo "> Changing Open-WebUI port to $newPort"
 	SetVar httpPort $newPort "$configFile" bash int
-	lineToChange=$(grep "PORT=" $defaultDir/open-webui/backend/start.sh | cut -d "-" -f 2 | sed "s|}\"||g")
-	sed -ri "s|-$lineToChange|-$newPort|g" "$defaultDir/open-webui/backend/start.sh"
-	Log "SETUP | SetVar newPort=$newPort" $logFile
+	Log "CHANGE-PORT | Changed Open-WebUI port to $newPort" $logFile
 	Control restart
 }
-
-#ChangePortSpeech()
-# {
-# 	source $configFile
-# 	PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
-# 	opendaiPort=$promptResult
-# 	echo "> Changing OpendAI-Speech port to $opendaiPort"
-# 	SetVar opendaiPort $opendaiPort "$configFile" bash int
-# 	Log "SETUP | SetVar httpPort=$opendaiPort" $logFile
-# 	systemctl restart opendai
-# }
 
 UpdateWeb()
 {
@@ -374,124 +362,13 @@ UpdateWeb()
 
 	source $configFile
 	systemctl stop open-webui
-	cp -rfv $defaultDir/open-webui/backend/data $defaultDir/
-	rm -rf $defaultDir/open-webui
-	git clone https://github.com/open-webui/open-webui.git $defaultDir/open-webui
-
-	cd $defaultDir/open-webui/
-	cp -RPp .env.example .env
-	npm i
-	npm run build
-	cd -
-
-	# Move data from previous install
-	cp -rfv $defaultDir/data $defaultDir/open-webui/backend/
-
-	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
-	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" $defaultDir/open-webui/backend/start.sh
-	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
-	ChangePort $httpPort
-	chown -Rf $defaultUser:$defaultUser $defaultDir
-	chmod -Rf 770 $defaultDir
 	sudo -u $defaultUser bash -c "
-		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-		conda init --all"
-	sudo -u $defaultUser bash -c "
-		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-		conda activate $defaultDir/config/conda/open-webui
-		pip install -r $defaultDir/open-webui/backend/requirements.txt
-		conda deactivate"
+	source $defaultDir/miniconda3/etc/profile.d/conda.sh
+	conda activate $defaultDir/config/conda/open-webui
+	pip install open-webui --upgrade"
 	systemctl start open-webui
+	Log "UPDATE-WEB | Updated Open-WebUI" $logFile
 }
-
-#UpdateWeb()
-#{
-#	if ! HasSudo; then
-#		exit
-#	fi
-#
-#	source $configFile
-#	systemctl stop open-webui
-#	if [[ -d $defaultDir/open-webui-backup ]]; then
-#		rm -rf $defaultDir/open-webui-backup
-#	fi
-#
-#	mv $defaultDir/open-webui $defaultDir/open-webui-backup
-#	git clone https://github.com/open-webui/open-webui.git $defaultDir/
-#	cp -RPp $defaultDir/open-webui/.env.example $defaultDir/open-webui/.env
-#
-#	cd $defaultDir/open-webui/
-#	npm i
-#	npm run build
-#	cd -
-#
-#	# Move data from previous install
-#	cp -rfv $defaultDir/open-webui/open-webui-backup/backend/data $defaultDir/open-webui/backend/
-#
-#	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
-#	sed -i "/^WEBUI_SECRET_KEY=/ s/$/ | tee \/opt\/open-webui\/log\/open-webui.log/" $defaultDir/open-webui/backend/start.sh
-#	chown -Rf $defaultUser:$defaultUser $defaultDir
-#	chmod -Rf 770 $defaultDir
-#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/open-webui
-#	$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt
-#	$defaultDir/miniconda3/bin/deactivate
-#	systemctl start open-webui
-#}
-
-# UpdateTTS(){
-# 	if ! HasSudo; then
-# 		exit
-# 	fi
-
-# 	pyVersion="3.11"
-# 	systemctl stop opendai
-# 	source $defaultDir/miniconda3/bin/activate
-# 	chown -Rf $defaultUser:$defaultUser $defaultDir
-# 	sudo -u $defaultUser bash -c "
-# 		cp $defaultDir/opendai-speech/start-tts.sh $defaultDir/
-# 		rm -rf $defaultDir/opendai-speech
-# 		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
-# 		cp $defaultDir/start-tts.sh $defaultDir/opendai-speech/
-# 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-# 		conda init --all"
-# 	sudo -u $defaultUser bash -c "
-# 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-# 		conda activate $defaultDir/config/conda/opendai
-# 		pip install -U -r $defaultDir/opendai-speech/requirements.txt
-# 		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
-# 		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
-# 		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-# 		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py
-# 		conda deactivate"
-# 	systemctl start opendai
-# }
-
-#UpdateTTS(){
-#	if ! HasSudo; then
-#		exit
-#	fi
-#
-#	pyVersion="3.11"
-#	systemctl stop opendai
-#	source $defaultDir/miniconda3/bin/activate
-#	if [[ -d $defaultDir/opendai-speech-backup ]]; then
-#		rm -rf $defaultDir/opendai-speech-backup
-#		mv -f $defaultDir/opendai-speech $defaultdir/opendai-speech-backup
-#	elif [[ -d $defaultDir/opendai-speech ]]; then
-#		mv -f $defaultDir/opendai-speech $defaultdir/opendai-speech-backup
-#	fi
-#	git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
-#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/opendai
-#	$defaultDir/config/conda/opendai/bin/pip install -U -r $defaultDir/opendai-speech/requirements.txt
-#	cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
-#	cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
-#	sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-#	sed -i 's/api_key = os.environ.get("OPENAI_API_KEY", "sk-ip"),/api_key = "sk-11111111111",/g' $defaultDir/opendai-speech/say.py
-#	sed -i "s/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:$opendaiPort\/v1,/g" $defaultDir/opendai-speech/say.py
-#	chown -Rf $defaultUser:$defaultUser $defaultDir
-#	$defaultDir/miniconda3/bin/deactivate
-#	systemctl start opendai
-#}
 
 Update()
 {
@@ -506,8 +383,6 @@ Update()
 	latestOllamaVersion=$(GetLatestOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
 	latestWebUIVersion=$(GetLatestWebUIVersion)
-	# installedOpendAIVersion=$(GetOpendAIVersion)
-	# latestOpendAIVersion=$(GetLatestOpendAIVersion)
 	
 	if [[ ! "$installedOllamaVersion" == "$latestOllamaVersion" ]]; then
 		curl -fsSL https://ollama.com/install.sh | sh
@@ -522,13 +397,6 @@ Update()
 	else
 		echo "> The latest Open Web-UI version $latestWebUIVersion is already installed."
 	fi
-
-	# if [[ ! "$installedOpendAIVersion" == "$latestOpendAIVersion" ]]; then
-	# 	UpdateTTS
-	# 	Log "UPDATE | Updated OpendAI-Speech to v$latestOpendAIVersion" $logFile
-	# else
-	# 	echo "> The latest Open Web-UI version $latestOpendAIVersion is already installed."
-	# fi
 	
 	if [[ ! "$installedLlamanVersion" == "$latestLlamanVersion" ]]; then
 		git clone https://github.com/Smiley-McSmiles/llaman
@@ -550,11 +418,9 @@ GetVersions()
 
 	installedOllamaVersion=$(GetOllamaVersion)
 	installedWebUIVersion=$(GetWebUIVersion)
-	# installedOpendAIVersion=$(GetOpendAIVersion)
 	echo "LLaMan v$llamanVersion"
 	echo "Ollama v$installedOllamaVersion"
 	echo "Open-WebUI v$installedWebUIVersion"
-	# echo "OpendAI-Speech v$installedOpendAIVersion"
 }
 
 GetLatestLlamanVersion()
@@ -580,17 +446,7 @@ GetLatestWebUIVersion()
 GetWebUIVersion()
 {
 	source $configFile
-	echo $(head -n 15 $defaultDir/open-webui/CHANGELOG.md | grep -o "## \[.*\]" | sed "s|## \[||g" | sed "s|\]||g")
-}
-
-GetOpendAIVersion(){
-	source $configFile
-	echo $(cat $defaultDir/opendai-speech/README.md | grep "Version.*[0-1]\." | head -n 1 | grep -o "[0-9]\.[0-9][0-9]\.[0-9]")
-}
-
-GetLatestOpendAIVersion()
-{
-	echo $(curl -fsSL https://github.com/matatonic/openedai-speech/releases/latest | grep '<title>' | grep -o "[0-9]\.[0-9][0-9]\.[0-9]")
+	echo $(head -n 15 $pipDir/CHANGELOG.md | grep -o "## \[.*\]" | sed "s|## \[||g" | sed "s|\]||g")
 }
 
 Control()

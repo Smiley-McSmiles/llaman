@@ -1,11 +1,12 @@
 #!/bin/bash
 
 DIRECTORY=$(cd `dirname $0` && pwd)
-llamanVersion=0.2.4
+llamanVersion=0.2.5
 httpPort=8080
 # opendaiPort=8000
 defaultUser=open-webui
 defaultDir=/opt/open-webui
+pipDir=/opt/open-webui/config/conda/open-webui/lib/python3.11/site-packages/open_webui
 logFile=$defaultDir/log/llaman.log
 
 source $DIRECTORY/scripts/llaman-functions
@@ -15,8 +16,9 @@ Update(){
 	configFile=/opt/open-webui/config/llaman.conf
 	source $configFile
 
-	# Conda
-	if [[ ! -d $defaultDir/config/conda/open-webui ]]; then
+	if [[ -d $defaultDIr/open-webui ]]; then
+		cp -rf $defaultDir/open-webui/backend/data $pipDir/
+		rm -rf $defaultDir/open-webui
 		SetupConda
 	fi
 
@@ -84,10 +86,10 @@ Update(){
 
 InstallDependencies()
 {
-	packagesNeededRHEL="npm python3-devel make automake gcc gcc-c++ kernel-devel curl screen"
-	packagesNeededDebian="npm python3-dev make automake gcc g++ linux-headers-$(uname -r) curl screen"
-	packagesNeededArch="npm python-devtools make automake gcc linux-headers curl screen"
-	packagesNeededOpenSuse="npm python-devel python312-devel make automake gcc g++ kernel-devel curl screen"
+	packagesNeededRHEL="python3-devel curl screen"
+	packagesNeededDebian="python3-dev curl screen"
+	packagesNeededArch="python-devtools curl screen"
+	packagesNeededOpenSuse="python-devel python312-devel curl screen"
 	echo "> Preparing to install needed dependancies for LLaman and Open-WebUI..."
 
 	if [[ -f /etc/os-release ]]; then
@@ -154,69 +156,9 @@ SetupConda(){
 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
 		conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y
 		conda activate $defaultDir/config/conda/open-webui
-		pip install -r $defaultDir/open-webui/backend/requirements.txt"
+		pip install open-webui"
 	echo "> Finished setting up Conda..."
 }
-
-# SetupTTS(){
-# 	echo "> Setting up OpendAI-Speech..."
-# 	pyVersion="3.11"
-# 	sudo -u $defaultUser bash -c "
-# 		source $defaultDir/miniconda3/etc/profile.d/conda.sh
-# 		conda create --prefix $defaultDir/config/conda/opendai python=$pyVersion -y
-# 		git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
-# 		conda activate $defaultDir/config/conda/opendai
-# 		pip install -U -r $defaultDir/opendai-speech/requirements.txt
-# 		cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
-# 		cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
-# 		sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-# 		sed -i 's/api_key = os.environ.get(\"OPENAI_API_KEY\", \"sk-ip\"),/api_key = \"sk-11111111111\",/g' $defaultDir/opendai-speech/say.py"
-#	sed -i 's/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:${opendaiPort}\/v1,/g' $defaultDir/opendai-speech/say.py
-# 	cp -f $DIRECTORY/scripts/start-tts.sh $defaultDir/opendai-speech/
-# 	cp -f $DIRECTORY/configs/opendai.service $serviceDirectory/
-# 	chmod +x $defaultDir/opendai-speech/start-tts.sh
-# 	echo "> Finished setting up OpendAI-Speech..."
-# }
-
-#SetupConda(){
-#	echo "> Setting up Conda..."
-#	pyVersion="3.11"
-#	mkdir -p $defaultDir/miniconda3 $defaultDir/config/conda
-#	wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $defaultDir/miniconda3/miniconda.sh
-#	chmod +x $defaultDir/miniconda3/miniconda.sh
-#	bash $defaultDir/miniconda3/miniconda.sh -b -u -p $defaultDir/miniconda3
-#	rm $defaultDir/miniconda3/miniconda.sh
-#	source $defaultDir/miniconda3/bin/activate
-#	$defaultDir/miniconda3/bin/conda init --all
-#	$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/open-webui python=$pyVersion -y
-#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/open-webui
-#	$defaultDir/config/conda/open-webui/bin/pip install -r $defaultDir/open-webui/backend/requirements.txt
-#	$defaultDir/miniconda3/bin/deactivate
-#	chown -Rf $defaultUser:$defaultUser $defaultDir
-#	echo "> Finished setting up Conda..."
-#}
-
-#SetupTTS(){
-#	echo "> Setting up OpendAI-Speech..."
-#	pyVersion="3.11"
-#	cp -f $DIRECTORY/configs/opendai.service $serviceDirectory/
-#	$defaultDir/miniconda3/bin/conda create --prefix $defaultDir/config/conda/opendai python=$pyVersion -y
-#	$defaultDir/miniconda3/bin/conda init --all
-#	source $defaultDir/miniconda3/bin/activate
-#	git clone https://github.com/matatonic/openedai-speech $defaultDir/opendai-speech
-#	cp -f $DIRECTORY/scripts/start-tts.sh $defaultDir/opendai-speech
-#	chmod +x $defaultDir/opendai-speech/start-tts.sh
-#	$defaultDir/miniconda3/bin/activate $defaultDir/config/conda/opendai
-#	$defaultDir/config/conda/opendai/bin/pip install -U -r $defaultDir/opendai-speech/requirements.txt
-#	cp $defaultDir/opendai-speech/sample.env $defaultDir/opendai-speech/speech.env
-#	cp $defaultDir/opendai-speech/say.py $defaultDir/opendai-speech/say.py.bak
-#	sed -i 's/# export OPENAI_API_KEY=sk-11111111111/export OPENAI_API_KEY=sk-11111111111,/g' $defaultDir/opendai-speech/say.py
-#	sed -i 's/api_key = os.environ.get("OPENAI_API_KEY", "sk-ip"),/api_key = "sk-11111111111",/g' $defaultDir/opendai-speech/say.py
-#	sed -i "s/\# export OPENAI_BASE_URL\=http\:\/\/localhost:8000\/v1/export OPENAI_BASE_URL\=http\:\/\/localhost:$opendaiPort\/v1,/g" $defaultDir/opendai-speech/say.py
-#	$defaultDir/miniconda3/bin/deactivate
-#	chown -Rf $defaultUser:$defaultUser $defaultDir
-#	echo "> Finished setting up OpendAI-Speech..."
-#}
 
 Import() {
 	if ! HasSudo; then
@@ -262,14 +204,6 @@ Setup(){
 	else
 		echo "> Keeping Open-WebUI on port 8080..."
 	fi
-
-	# if PromptUser yN "Would you like to change the default OpendAI port from 8000?" 0 0 "y/N"; then
-	# 	PromptUser num "Enter a valid port" 1024 65535 "1024-65535"
-	# 	opendaiPort=$promptResult
-	# 	echo "> Changing OpendAI port to $opendaiPort"
-	# else
-	# 	echo "> Keeping OpendAI on port 8000..."
-	# fi
 	
 	PromptUser dir "Please enter the storage directory for .gguf models" 0 0 "/path/to/directory"
 	ggufDirectory=$promptResult
@@ -307,7 +241,6 @@ Setup(){
 	SetVar defaultDir $defaultDir "$configFile" bash directory
 	SetVar logFile $logFile "$configFile" bash directory
 	SetVar httpPort $httpPort "$configFile" bash int
-	# SetVar opendaiPort $opendaiPort "$configFile" bash int
 	SetVar ggufDirectory $ggufDirectory "$configFile" bash directory
 	SetVar backupDirectory $backupDirectory "$configFile" bash directory
 	SetVar modelFiles $defaultDir/config/modelfiles "$configFile" bash directory
@@ -377,20 +310,7 @@ Setup(){
 	SetVar User $defaultUser $serviceDirectory/open-webui.service bash user
 	Log "SETUP | SetVar serviceDirectory=$serviceDirectory" $logFile
 
-	git clone https://github.com/open-webui/open-webui.git $defaultDir/open-webui
-	cp -RPp $defaultDir/open-webui/.env.example $defaultDir/open-webui/.env
-
-	cd $defaultDir/open-webui
-	npm i
-	npm run build
-	npx update-browserslist-db@latest
-	cd -
-
-	sed -ri "s|exec uvicorn|python -m uvicorn|g" $defaultDir/open-webui/backend/start.sh
-	sed -ri "s|-8080|-$httpPort|g" $defaultDir/open-webui/backend/start.sh
-
 	SetupConda
-	# SetupTTS
 	sed -i 's/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "true"/os.environ.get("ENABLE_ADMIN_CHAT_ACCESS", "True").lower() == "false"/g' $defaultDir/open-webui/backend/open_webui/config.py
 	
 	chown -Rf $defaultUser:$defaultUser $defaultDir

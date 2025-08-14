@@ -1,5 +1,9 @@
 # CHANGELOG.md for https://GitHub.com/Smiley-McSmiles/llaman
 
+# LLaMan v0.2.5
+## Changes
+- Moved to the open-webui pip install
+
 # LLaMan v0.2.4
 ## Fixes
 - Fixed bug where automatic backup was deleting newer backup files since December->January
